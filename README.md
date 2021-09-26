@@ -18,3 +18,17 @@ pip install selenium
 ### Install web driver
 Download the binary from https://sites.google.com/chromium.org/driver/  
 and install it to bin/ .
+
+## setting
+fill in src/config.ini
+```
+[MONEYFORWARD]
+Email = <registered email>
+Password = <registered password>
+```
+
+## run
+```
+cd src
+python download_history.py
+```
