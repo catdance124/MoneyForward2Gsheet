@@ -3,6 +3,7 @@ import re
 import time
 from pathlib import Path
 from selenium import webdriver
+import pandas as pd
 
 
 class Moneyforward():
@@ -43,17 +44,34 @@ class Moneyforward():
                 if not save_path.exists():
                     month_csv = f"https://moneyforward.com/bs/history/list/{month}/monthly/csv"
                     self.driver.get(month_csv)
-                    self._rename_file(save_path)
+                    self._rename_latest_file(save_path)
         # download this month csv
         this_month_csv = "https://moneyforward.com/bs/history/csv"
+        save_path = Path(self.csv_dir/"this_month.csv")
+        save_path.unlink(missing_ok=True)
         self.driver.get(this_month_csv)
-        self._rename_file(Path(self.csv_dir/"this_month.csv"))
+        self._rename_latest_file(save_path)
+        # create concatenated csv -> all.csv
+        self._concat_csv()
 
-    def _rename_file(self, new_path):
+    def _rename_latest_file(self, new_path):
         time.sleep(2)
-        file_list = self.csv_dir.glob('*')
-        latest_file = max(file_list, key=lambda p: p.stat().st_ctime)
-        latest_file.rename(new_path)
+        csv_list = self.csv_dir.glob('*[!all].csv')
+        latest_csv = max(csv_list, key=lambda p: p.stat().st_ctime)
+        latest_csv.rename(new_path)
+    
+    def _concat_csv(self):
+        csv_list = sorted(self.csv_dir.glob('*[!all].csv'))
+        df_list = []
+        for csv_path in csv_list:
+            df = pd.read_csv(csv_path, encoding="shift-jis", sep=',')
+            df_list.append(df)
+        df_concat = pd.concat(df_list)
+        df_concat.drop_duplicates(subset='日付', inplace=True)
+        df_concat.set_index('日付', inplace=True)
+        df_concat.sort_index(inplace=True)
+        df_concat.fillna(0, inplace=True)
+        df_concat.to_csv(Path(self.csv_dir/'all.csv'), encoding="shift-jis")
 
 
 
