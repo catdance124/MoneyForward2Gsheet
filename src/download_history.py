@@ -1,5 +1,6 @@
 import configparser
 import re
+import time
 from pathlib import Path
 from selenium import webdriver
 
@@ -10,10 +11,10 @@ class Moneyforward():
     後で書く
     """
     def __init__(self, driver_path="../bin/chromedriver.exe"):
-        csv_dir = Path("../csv")
-        csv_dir.mkdir(exist_ok=True)
+        self.csv_dir = Path("../csv")
+        self.csv_dir.mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
-        options.add_experimental_option("prefs", {"download.default_directory": str(csv_dir.resolve()) })
+        options.add_experimental_option("prefs", {"download.default_directory": str(self.csv_dir.resolve()) })
         self.driver = webdriver.Chrome(executable_path=driver_path, options=options)
 
     def login(self, email, password):
@@ -33,14 +34,27 @@ class Moneyforward():
         history_url = "https://moneyforward.com/bs/history"
         self.driver.get(history_url)
         elems = self.driver.find_elements_by_xpath('//*[@id="bs-history"]/*/table/tbody/tr/td/a')
+        # download previous month csv
         for elem in elems:
             href = elem.get_attribute("href")
             if "monthly" in href:
                 month = re.search(r'\d{4}-\d{2}-\d{2}', href).group()
-                month_csv = f"https://moneyforward.com/bs/history/list/{month}/monthly/csv"
-                self.driver.get(month_csv)
+                save_path = Path(self.csv_dir/f"{month}.csv")
+                if not save_path.exists():
+                    month_csv = f"https://moneyforward.com/bs/history/list/{month}/monthly/csv"
+                    self.driver.get(month_csv)
+                    self._rename_file(save_path)
+        # download this month csv
         this_month_csv = "https://moneyforward.com/bs/history/csv"
         self.driver.get(this_month_csv)
+        self._rename_file(Path(self.csv_dir/"this_month.csv"))
+
+    def _rename_file(self, new_path):
+        time.sleep(2)
+        file_list = self.csv_dir.glob('*')
+        latest_file = max(file_list, key=lambda p: p.stat().st_ctime)
+        latest_file.rename(new_path)
+
 
 
 if __name__ == "__main__":
