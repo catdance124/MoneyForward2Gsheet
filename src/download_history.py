@@ -11,11 +11,12 @@ class Moneyforward():
     docstring:hogehoge
     後で書く
     """
-    def __init__(self, driver_path="../bin/chromedriver.exe"):
+    def __init__(self, driver_path):
         self.csv_dir = Path("../csv")
         self.csv_dir.mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
         options.add_experimental_option("prefs", {"download.default_directory": str(self.csv_dir.resolve()) })
+        options.add_argument('--no-sandbox')
         self.driver = webdriver.Chrome(executable_path=driver_path, options=options)
 
     def login(self, email, password):
@@ -48,7 +49,8 @@ class Moneyforward():
         # download this month csv
         this_month_csv = "https://moneyforward.com/bs/history/csv"
         save_path = Path(self.csv_dir/"this_month.csv")
-        save_path.unlink(missing_ok=True)
+        if save_path.exists():
+            save_path.unlink()
         self.driver.get(this_month_csv)
         self._rename_latest_file(save_path)
         # create concatenated csv -> all.csv
@@ -80,8 +82,9 @@ if __name__ == "__main__":
     config_ini.read('config.ini', encoding='utf-8')
     email = config_ini.get('MONEYFORWARD', 'Email')
     password = config_ini.get('MONEYFORWARD', 'Password')
+    driver_path = config_ini.get('CHROME_DRIVER', 'Path')
     try:
-        mf = Moneyforward()
+        mf = Moneyforward(driver_path=driver_path)
         mf.login(email=email, password=password)
         mf.download_history()
     except ValueError:
