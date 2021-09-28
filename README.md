@@ -96,6 +96,12 @@ Path = <installed path>
 
 ## run
 ```
-cd src
-python download_history.py
+# cd src
+# python download_history.py
+```
+
+## Appendix: cron settings
+```
+# crontab -e
+0 9 * * * export DISPLAY=localhost:1.0; python3 /home/opc/download_asset_trends_from_MoneyForward/src/download_history.py
 ```
