@@ -118,7 +118,7 @@ Place the obtained json file as src/client_secret.json .
 ### cron settings
 ```
 # crontab -e
-0 9 * * * export DISPLAY=localhost:1.0; python3 /home/opc/download_asset_trends_from_MoneyForward/src/mf2gs.py
+0 9 * * * export DISPLAY=localhost:1.0; python3 /home/opc/MoneyForward2Gsheet/src/mf2gs.py
 ```
 
 ### result
