@@ -119,6 +119,9 @@ Place the obtained json file as src/client_secret.json .
 ```
 # crontab -e
 0 9 * * * export DISPLAY=localhost:1.0; python3 /home/opc/MoneyForward2Gsheet/src/mf2gs.py
+10 9 * * * ps aux | grep chromedriver | grep -v grep | awk '{ print "kill -9", $2 }' | sh
+10 9 * * * ps aux | grep "Google Chrome" | grep -v grep | awk '{ print "kill -9", $2 }' | sh
+10 9 * * * ps aux | grep "Google Helper" | grep -v grep | awk '{ print "kill -9", $2 }' | sh
 ```
 
 ### result
