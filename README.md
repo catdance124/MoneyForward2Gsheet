@@ -1,20 +1,17 @@
-# download_asset_trends_from_MoneyForward
-Downloading asset trends from MoneyForward  
-to try to visualize asset trends retrieved from MoneyForward in python.
+# MoneyForward2Gsheet
+Downloading asset trends📈 from MoneyForward, and exporting them to google spreadsheet, in python.
 
 ## env
 *Accessing MoneyForward from Japan*
 ```
 OS: Windows / CentOS7(CLI)
 Python (win)3.8.5, (centos)3.6.8
-selenium
-pandas
-ChromeDriver: (win)93.0.4577.63, (centos)94.0.4606.61
 ```
-
-### Install py lib
 ```
+# for download
 pip install selenium, pandas
+# for export
+pip gspread oauth2client
 ```
 
 ### Install web driver(Windows)
@@ -92,16 +89,43 @@ Password = <registered password>
 Path = <installed path>
 ; Path = ../bin/chromedriver.exe
 ; Path = /usr/local/bin/chromedriver
+
+[SPREAD_SHEET]
+Key = <spreadsheet key got from URL>
+Worksheet_name = <any sheet name>
+; Worksheet_name = 資産推移データ(自動入力)
 ```
+
+### google spreadsheet R/W
+enable API, and allow client to edit your sheet.  
+[reference](https://qiita.com/164kondo/items/eec4d1d8fd7648217935)  
+
+Place the obtained json file as src/client_secret.json .
+
 
 ## run
 ```
 # cd src
+# python mf2gs.py
+
+## for csv download only
 # python download_history.py
+## for csv export to sheet only
+# python export_gspread.py
 ```
 
-## Appendix: cron settings
+## Appendix
+### cron settings
 ```
 # crontab -e
-0 9 * * * export DISPLAY=localhost:1.0; python3 /home/opc/download_asset_trends_from_MoneyForward/src/download_history.py
+0 9 * * * export DISPLAY=localhost:1.0; python3 /home/opc/download_asset_trends_from_MoneyForward/src/mf2gs.py
 ```
+
+### result
+Asset transition data written to a spreadsheet. ( Of course, the numbers are dummy XD )  
+![image](https://user-images.githubusercontent.com/37448236/135253334-587f63aa-f8d9-4039-b945-03c50d2eea14.png)
+
+With this data, you can create any graph you like.  
+As shown below. [reference](https://fire-hiko.com/moneyfoward-graph-tool/)
+![IMG-9422](https://user-images.githubusercontent.com/37448236/135253595-f9645898-f5da-4cad-8bb1-8c9af2aa23cb.PNG)  
+![IMG-9423](https://user-images.githubusercontent.com/37448236/135253598-736f032e-5f19-4fb4-9d30-0e669d2eb7b7.PNG)  
