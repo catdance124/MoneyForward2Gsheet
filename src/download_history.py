@@ -18,6 +18,9 @@ class Moneyforward():
         options.add_experimental_option("prefs", {"download.default_directory": str(self.csv_dir.resolve()) })
         options.add_argument('--no-sandbox')
         self.driver = webdriver.Chrome(executable_path=driver_path, options=options)
+    
+    def close(self):
+        self.driver.close()
 
     def login(self, email, password):
         login_url = "https://moneyforward.com/sign_in"
@@ -46,6 +49,7 @@ class Moneyforward():
                     month_csv = f"https://moneyforward.com/bs/history/list/{month}/monthly/csv"
                     self.driver.get(month_csv)
                     self._rename_latest_file(save_path)
+                    print(f"Downloaded {save_path}")
         # download this month csv
         this_month_csv = "https://moneyforward.com/bs/history/csv"
         save_path = Path(self.csv_dir/"this_month.csv")
@@ -53,6 +57,7 @@ class Moneyforward():
             save_path.unlink()
         self.driver.get(this_month_csv)
         self._rename_latest_file(save_path)
+        print(f"Downloaded {save_path}")
         # create concatenated csv -> all.csv
         self._concat_csv()
 
@@ -71,13 +76,12 @@ class Moneyforward():
         df_concat = pd.concat(df_list)
         df_concat.drop_duplicates(subset='日付', inplace=True)
         df_concat.set_index('日付', inplace=True)
-        df_concat.sort_index(inplace=True)
+        df_concat.sort_index(inplace=True, ascending=False)
         df_concat.fillna(0, inplace=True)
         df_concat.to_csv(Path(self.csv_dir/'all.csv'), encoding="shift-jis")
 
 
-
-if __name__ == "__main__":
+def main():
     config_ini = configparser.ConfigParser()
     config_ini.read('config.ini', encoding='utf-8')
     email = config_ini.get('MONEYFORWARD', 'Email')
@@ -87,5 +91,10 @@ if __name__ == "__main__":
         mf = Moneyforward(driver_path=driver_path)
         mf.login(email=email, password=password)
         mf.download_history()
+        mf.close()
     except ValueError:
         print("ERROR")
+
+
+if __name__ == "__main__":
+    main()
