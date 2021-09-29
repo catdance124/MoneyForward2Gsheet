@@ -20,7 +20,7 @@ class Moneyforward():
         self.driver = webdriver.Chrome(executable_path=driver_path, options=options)
     
     def close(self):
-        self.driver.close()
+        self.driver.quit()
 
     def login(self, email, password):
         login_url = "https://moneyforward.com/sign_in"
