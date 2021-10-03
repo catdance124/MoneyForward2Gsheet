@@ -35,6 +35,17 @@ class Moneyforward():
         elem.send_keys(password)
         elem.submit()
 
+    def get_valuation_profit_and_loss(self):
+        portfolio_url = "https://moneyforward.com/bs/portfolio"
+        self.driver.get(portfolio_url)
+        elem = self.driver.find_element_by_xpath('//*[@id="portfolio_det_eq"]/table')
+        ths = elem.find_elements_by_tag_name("th")
+        tds = elem.find_elements_by_tag_name("td")
+        for th in ths:
+            print(th.text)
+        for th in tds:
+            print(th.text)
+
     def download_history(self):
         history_url = "https://moneyforward.com/bs/history"
         self.driver.get(history_url)
@@ -90,7 +101,8 @@ def main():
     try:
         mf = Moneyforward(driver_path=driver_path)
         mf.login(email=email, password=password)
-        mf.download_history()
+        # mf.download_history()
+        mf.get_valuation_profit_and_loss()
         mf.close()
     except ValueError:
         print("ERROR")
