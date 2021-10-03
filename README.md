@@ -92,8 +92,6 @@ Path = <installed path>
 
 [SPREAD_SHEET]
 Key = <spreadsheet key got from URL>
-Worksheet_name = <any sheet name>
-; Worksheet_name = 資産推移データ(自動入力)
 ```
 
 ### google spreadsheet R/W
@@ -119,9 +117,9 @@ Place the obtained json file as src/client_secret.json .
 ```
 # crontab -e
 0 9 * * * export DISPLAY=localhost:1.0; python3 /home/opc/MoneyForward2Gsheet/src/mf2gs.py
-10 9 * * * ps aux | grep chromedriver | grep -v grep | awk '{ print "kill -9", $2 }' | sh
-10 9 * * * ps aux | grep "Google Chrome" | grep -v grep | awk '{ print "kill -9", $2 }' | sh
-10 9 * * * ps aux | grep "Google Helper" | grep -v grep | awk '{ print "kill -9", $2 }' | sh
+10 9 * * * ps aux | grep chromedriver | grep -v grep | awk '{ sudo print "kill -9", $2 }' | sh
+10 9 * * * ps aux | grep "Google Chrome" | grep -v grep | awk '{ sudo print "kill -9", $2 }' | sh
+10 9 * * * ps aux | grep "Google Helper" | grep -v grep | awk '{ sudo print "kill -9", $2 }' | sh
 ```
 
 ### result
