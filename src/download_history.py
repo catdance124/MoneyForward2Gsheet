@@ -3,6 +3,7 @@ import re
 import time
 from pathlib import Path
 from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
 
 
@@ -11,13 +12,13 @@ class Moneyforward():
     docstring:hogehoge
     後で書く
     """
-    def __init__(self, driver_path):
+    def __init__(self):
         self.csv_dir = Path("../csv")
         self.csv_dir.mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
         options.add_experimental_option("prefs", {"download.default_directory": str(self.csv_dir.resolve()) })
         options.add_argument('--no-sandbox')
-        self.driver = webdriver.Chrome(executable_path=driver_path, options=options)
+        self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
     
     def close(self):
         self.driver.quit()
@@ -110,9 +111,8 @@ def main():
     config_ini.read('config.ini', encoding='utf-8')
     email = config_ini.get('MONEYFORWARD', 'Email')
     password = config_ini.get('MONEYFORWARD', 'Password')
-    driver_path = config_ini.get('CHROME_DRIVER', 'Path')
     try:
-        mf = Moneyforward(driver_path=driver_path)
+        mf = Moneyforward()
         mf.login(email=email, password=password)
         mf.download_history()
         mf.get_valuation_profit_and_loss_multiple(asset_id_list=["portfolio_det_depo", "portfolio_det_eq", "portfolio_det_mf", "portfolio_det_pns"])
