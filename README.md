@@ -9,16 +9,12 @@ Python (win)3.8.5, (centos)3.6.8
 ```
 ```
 # for download
-pip install selenium, pandas
+pip install selenium, pandas, webdriver-manager
 # for export
 pip gspread oauth2client
 ```
 
-### Install web driver(Windows)
-Download the binary from https://sites.google.com/chromium.org/driver/  
-and install it to bin/ .
-
-### Install web driver(CentOS)
+### Settings(CentOS)
 chrome install  
 [reference](https://qiita.com/mindwood/items/245adeb6da18999bbfc4)  
 ```
@@ -37,14 +33,6 @@ gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
 Google Chrome 94.0.4606.61
 # yum -y install ipa-gothic-fonts ipa-mincho-fonts ipa-pgothic-fonts ipa-pmincho-fonts
 # google-chrome --headless --no-sandbox --dump-dom https://www.google.com/
-```
-web driver install  
-```
-# cd /usr/local/bin
-# wget https://chromedriver.storage.googleapis.com/94.0.4606.61/chromedriver_linux64.zip
-# unzip chromedriver_linux64.zip
-# chmod 755 chromedriver
-# rm chromedriver_linux64.zip 
 ```
 virtual display install  
 [reference](https://qiita.com/kotanbo/items/093fc71b71ee5f20baf0#xvfb)
@@ -85,11 +73,6 @@ fill in src/config.ini
 Email = <registered email>
 Password = <registered password>
 
-[CHROME_DRIVER]
-Path = <installed path>
-; Path = ../bin/chromedriver.exe
-; Path = /usr/local/bin/chromedriver
-
 [SPREAD_SHEET]
 Key = <spreadsheet key got from URL>
 ```
@@ -117,9 +100,9 @@ Place the obtained json file as src/client_secret.json .
 ```
 # crontab -e
 0 9 * * * export DISPLAY=localhost:1.0; python3 /home/opc/MoneyForward2Gsheet/src/mf2gs.py
-10 9 * * * ps aux | grep chromedriver | grep -v grep | awk '{ sudo print "kill -9", $2 }' | sh
-10 9 * * * ps aux | grep "Google Chrome" | grep -v grep | awk '{ sudo print "kill -9", $2 }' | sh
-10 9 * * * ps aux | grep "Google Helper" | grep -v grep | awk '{ sudo print "kill -9", $2 }' | sh
+10 9 * * * ps aux | grep chromedriver | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh
+10 9 * * * ps aux | grep "Google Chrome" | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh
+10 9 * * * ps aux | grep "Google Helper" | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh
 ```
 
 ### result
