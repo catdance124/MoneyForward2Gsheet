@@ -4,21 +4,30 @@ Downloading asset trends📈 from MoneyForward, and exporting them to google spr
 ## env
 *Accessing MoneyForward from Japan*
 ```
-OS: Windows / CentOS7(CLI)
-Python (win)3.8.5, (centos)3.6.8
+OS: Windows10
+Python: 3.8.5
 ```
 ```
-# for download
-pip install selenium, pandas, webdriver-manager
-# for export
-pip gspread oauth2client
+OS: CentOS7(CLI)
+Python: 3.6.8
 ```
 
-### Settings(CentOS)
-chrome install  
+### Install
+#### some python package install (Windows&CentOS)
+```
+# for download
+pip3 install selenium, pandas, webdriver-manager
+# for export
+pip3 gspread oauth2client
+```
+`webdriver-manager` is required to use the chromedriver that matches the version of google-chrome.
+
+#### chrome install (CentOS)
 [reference](https://qiita.com/mindwood/items/245adeb6da18999bbfc4)  
 ```
 # vim /etc/yum.repos.d/google.chrome.repo
+```
+```
 [google-chrome]
 name=google-chrome
 baseurl=http://dl.google.com/linux/chrome/rpm/stable/$basearch
@@ -34,40 +43,36 @@ Google Chrome 94.0.4606.61
 # yum -y install ipa-gothic-fonts ipa-mincho-fonts ipa-pgothic-fonts ipa-pmincho-fonts
 # google-chrome --headless --no-sandbox --dump-dom https://www.google.com/
 ```
-virtual display install  
-[reference](https://qiita.com/kotanbo/items/093fc71b71ee5f20baf0#xvfb)
+#### virtual display install (CentOS)
+[reference](https://gist.github.com/ypandit/f4fe751bcbf3ee6a32ca)
 ```
 # yum install xorg-x11-server-Xvfb
 ```
 ```
-# vim /usr/lib/systemd/system/Xvfb.service
+# vim /etc/systemd/system/Xvfb.service
+```
+```config
 [Unit]
-Description=Virtual Framebuffer X server for X Version 11
+Description=X Virtual Frame Buffer Service
+After=network.target
 
 [Service]
-Type=simple
-EnvironmentFile=-/etc/sysconfig/Xvfb
-ExecStart=/usr/bin/Xvfb $OPTION
-ExecReload=/bin/kill -HUP ${MAINPID}
+ExecStart=/usr/bin/Xvfb :99 -screen 0 1024x768x24
 
 [Install]
 WantedBy=multi-user.target
 ```
 ```
-# vim /etc/sysconfig/Xvfb
-# Xvfb Enviroment File
-OPTION=":1 -screen 0 1366x768x24"
+# systemctl enable Xvfb.service
+# systemctl start Xvfb.service
 ```
+Export the virtual display created(:99) as the `DISPLAY` environment variable.  
 ```
-# systemctl enable Xvfb
-# systemctl start Xvfb
-```
-```
-# export DISPLAY=localhost:1.0;
+# export DISPLAY=localhost:99
 ```
 
 ## setting
-fill in src/config.ini
+fill in `src/config.ini`
 ```
 [MONEYFORWARD]
 Email = <registered email>
@@ -81,28 +86,26 @@ Key = <spreadsheet key got from URL>
 enable API, and allow client to edit your sheet.  
 [reference](https://qiita.com/164kondo/items/eec4d1d8fd7648217935)  
 
-Place the obtained json file as src/client_secret.json .
+Place the obtained json file as `src/client_secret.json` .
 
 
 ## run
 ```
 # cd src
-# python mf2gs.py
+# export DISPLAY=localhost:99; python3 mf2gs.py
 
 ## for csv download only
-# python download_history.py
+# export DISPLAY=localhost:99; python3 download_history.py
 ## for csv export to sheet only
-# python export_gspread.py
+# export DISPLAY=localhost:99; python3 export_gspread.py
 ```
 
 ## Appendix
 ### cron settings
+After running, kill the remaining chrome processes.
 ```
 # crontab -e
-0 9 * * * export DISPLAY=localhost:1.0; python3 /home/opc/MoneyForward2Gsheet/src/mf2gs.py
-10 9 * * * ps aux | grep chromedriver | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh
-10 9 * * * ps aux | grep "Google Chrome" | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh
-10 9 * * * ps aux | grep "Google Helper" | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh
+0 * * * * export DISPLAY=localhost:99; cd /home/opc/MoneyForward2Gsheet/src; python3 mf2gs.py;  ps aux | grep chromedriver | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh;  ps aux | grep "Google Chrome" | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh;  ps aux | grep "Google Helper" | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh
 ```
 
 ### result
