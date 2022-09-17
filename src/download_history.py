@@ -41,7 +41,7 @@ class Moneyforward():
         elem.clear()
         elem.send_keys(password)
         elem.submit()
-
+    
     def get_valuation_profit_and_loss_multiple(self, asset_id_list):
         for asset_id in asset_id_list:
             self.get_valuation_profit_and_loss(asset_id)
@@ -49,23 +49,20 @@ class Moneyforward():
     def get_valuation_profit_and_loss(self, asset_id):
         portfolio_url = "https://moneyforward.com/bs/portfolio"
         self.driver.get(portfolio_url)
-        elems = self.driver.find_elements(By.XPATH, f'//*[@id="{asset_id}"]//*/table')
+        elems = self.driver.find_elements(By.XPATH, f'//*[@id="{asset_id}"]//table')
         if len(elems) == 0:
-            elem = self.driver.find_element(By.XPATH, f'//*[@id="{asset_id}"]/table')
-        else:
-            elem = elems[0]
-        ths = [th.text for th in elem.find_elements(By.TAG_NAME, "th")]
-        trs = elem.find_elements(By.TAG_NAME, "tr")
-        tds = [[td.text for td in tr.find_elements(By.TAG_NAME, "td")] for tr in trs]
+            raise "no portfolio elements"
+        elem = elems[0]
+        ths = [th.text for th in elem.find_elements(By.XPATH, "thead//th")]
+        trs = elem.find_elements(By.XPATH, "tbody/tr")
+        tds = [[td.text for td in tr.find_elements(By.XPATH, "td")] for tr in trs]
         df = pd.DataFrame(tds, columns=ths)
-        df[df.columns[0]].replace('', pd.np.nan, inplace=True)
-        df.dropna(subset=[df.columns[0]], inplace=True)
         portfolio_dir = Path(self.csv_dir/'portfolio')
         portfolio_dir.mkdir(exist_ok=True)
         save_path = Path(portfolio_dir/f'{asset_id}.csv')
         df.to_csv(save_path, encoding="shift-jis")
         print(f"Downloaded {save_path}")
-    
+
     def download_history(self):
         history_url = "https://moneyforward.com/bs/history"
         self.driver.get(history_url)
@@ -117,15 +114,13 @@ def main():
     config_ini.read('config.ini', encoding='utf-8')
     email = config_ini.get('MONEYFORWARD', 'Email')
     password = config_ini.get('MONEYFORWARD', 'Password')
+    mf = Moneyforward()
     try:
-        mf = Moneyforward()
         mf.login(email=email, password=password)
         mf.download_history()
         mf.get_valuation_profit_and_loss_multiple(asset_id_list=["portfolio_det_depo", "portfolio_det_eq", "portfolio_det_mf", "portfolio_det_pns"])
+    finally:
         mf.close()
-    except ValueError:
-        print("ERROR")
-
 
 if __name__ == "__main__":
     main()
