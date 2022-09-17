@@ -17,7 +17,7 @@ class Moneyforward():
         self.csv_dir.mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
         options.add_experimental_option("prefs", {"download.default_directory": str(self.csv_dir.resolve()) })
-        options.add_argument('--no-sandbox')
+        options.add_argument("--no-sandbox")
         self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
     
     def close(self):
