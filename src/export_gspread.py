@@ -1,5 +1,6 @@
 import configparser
 import csv
+from pathlib import Path
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
@@ -25,26 +26,28 @@ def update_sheet(workbook, worksheet_name, csv_path):
     )
 
 def calc_profit_and_loss():
-    csv_path = "../csv/all.csv"
-    df_all_org = pd.read_csv(csv_path, encoding="shift-jis", sep=',')
-    csv_path = "../csv/portfolio/portfolio_all.csv"
-    df_all_with_profit_and_loss = pd.read_csv(csv_path, encoding="shift-jis", sep=',')
+    df_all_org = pd.read_csv("../csv/all.csv", encoding="shift-jis", sep=',')
+    portfolio_all_csv_path = Path("../csv/portfolio/portfolio_all.csv")
+    if portfolio_all_csv_path.exists():
+        df_all_with_profit_and_loss = pd.read_csv(portfolio_all_csv_path, encoding="shift-jis", sep=',')
+    else:
+        df_all_with_profit_and_loss = df_all_org
     df_all_with_profit_and_loss = pd.merge(df_all_org, df_all_with_profit_and_loss, how='left')
     df_all_with_profit_and_loss.drop_duplicates(subset='日付', inplace=True)
     df_all_with_profit_and_loss.set_index('日付', inplace=True)
     portfolio  = {'損益_投資信託':'../csv/portfolio/portfolio_det_mf.csv',
                 '損益_年金':'../csv/portfolio/portfolio_det_pns.csv',
                 '損益_株式（現物）':'../csv/portfolio/portfolio_det_eq.csv'}
-    for name, csv_path in portfolio.items():
-        df = pd.read_csv(csv_path, encoding="shift-jis", sep=',')
+    for column_name, portfolio_csv_path in portfolio.items():
+        df = pd.read_csv(portfolio_csv_path, encoding="shift-jis", sep=',')
         df = df.dropna(subset=['評価損益'])
         df['評価損益'] = df['評価損益'].apply(lambda x: x.strip('円') if '円' in x else x)
         df['評価損益'] = df['評価損益'].str.replace(',','').astype(np.int)
         profit_and_loss = df['評価損益'].sum()
-        if not name in df_all_with_profit_and_loss.columns:
-            df_all_with_profit_and_loss[name] = 0
+        if not column_name in df_all_with_profit_and_loss.columns:
+            df_all_with_profit_and_loss[column_name] = 0
         else:
-            df_all_with_profit_and_loss.at[df_all_with_profit_and_loss.index[0], name] = profit_and_loss
+            df_all_with_profit_and_loss.at[df_all_with_profit_and_loss.index[0], column_name] = profit_and_loss
     df_all_with_profit_and_loss.to_csv('../csv/portfolio/portfolio_all.csv', encoding="shift-jis")
     
 
