@@ -3,7 +3,10 @@ import re
 import time
 from pathlib import Path
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+from subprocess import CREATE_NO_WINDOW
 import pandas as pd
 
 
@@ -16,9 +19,11 @@ class Moneyforward():
         self.csv_dir = Path("../csv")
         self.csv_dir.mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
-        options.add_experimental_option("prefs", {"download.default_directory": str(self.csv_dir.resolve()) })
+        options.add_experimental_option("prefs", {"download.default_directory": str(self.csv_dir.resolve())})
         options.add_argument("--no-sandbox")
-        self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+        service = Service(ChromeDriverManager().install())
+        service.creationflags = CREATE_NO_WINDOW
+        self.driver = webdriver.Chrome(service=service, options=options)
     
     def close(self):
         self.driver.quit()
@@ -26,12 +31,13 @@ class Moneyforward():
     def login(self, email, password):
         login_url = "https://moneyforward.com/sign_in"
         self.driver.get(login_url)
-        self.driver.find_element_by_link_text("メールアドレスでログイン").click()
-        elem = self.driver.find_element_by_name("mfid_user[email]")
+        self.driver.find_element(By.LINK_TEXT, "メールアドレスでログイン").click()
+        elem = self.driver.find_element(By.NAME, "mfid_user[email]")
         elem.clear()
         elem.send_keys(email)
         elem.submit()
-        elem = self.driver.find_element_by_name("mfid_user[password]")
+        time.sleep(3)
+        elem = self.driver.find_element(By.NAME, "mfid_user[password]")
         elem.clear()
         elem.send_keys(password)
         elem.submit()
@@ -43,14 +49,14 @@ class Moneyforward():
     def get_valuation_profit_and_loss(self, asset_id):
         portfolio_url = "https://moneyforward.com/bs/portfolio"
         self.driver.get(portfolio_url)
-        elems = self.driver.find_elements_by_xpath(f'//*[@id="{asset_id}"]//*/table')
+        elems = self.driver.find_elements(By.XPATH, f'//*[@id="{asset_id}"]//*/table')
         if len(elems) == 0:
-            elem = self.driver.find_element_by_xpath(f'//*[@id="{asset_id}"]/table')
+            elem = self.driver.find_element(By.XPATH, f'//*[@id="{asset_id}"]/table')
         else:
             elem = elems[0]
-        ths = [th.text for th in elem.find_elements_by_tag_name("th")]
-        trs = elem.find_elements_by_tag_name("tr")
-        tds = [[td.text for td in tr.find_elements_by_tag_name("td")] for tr in trs]
+        ths = [th.text for th in elem.find_elements(By.TAG_NAME, "th")]
+        trs = elem.find_elements(By.TAG_NAME, "tr")
+        tds = [[td.text for td in tr.find_elements(By.TAG_NAME, "td")] for tr in trs]
         df = pd.DataFrame(tds, columns=ths)
         df[df.columns[0]].replace('', pd.np.nan, inplace=True)
         df.dropna(subset=[df.columns[0]], inplace=True)
@@ -63,7 +69,7 @@ class Moneyforward():
     def download_history(self):
         history_url = "https://moneyforward.com/bs/history"
         self.driver.get(history_url)
-        elems = self.driver.find_elements_by_xpath('//*[@id="bs-history"]/*/table/tbody/tr/td/a')
+        elems = self.driver.find_elements(By.XPATH, '//*[@id="bs-history"]/*/table/tbody/tr/td/a')
         # download previous month csv
         for elem in elems:
             href = elem.get_attribute("href")
