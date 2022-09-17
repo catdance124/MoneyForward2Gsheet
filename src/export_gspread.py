@@ -6,6 +6,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import numpy as np
 
+root_csv_dir = Path('../csv')
+portfolio_csv_dir = root_csv_dir / 'portfolio'
 
 def connect_gspread(json_path, spreadsheet_key):
     scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
@@ -25,9 +27,9 @@ def update_sheet(workbook, worksheet_name, csv_path):
         body={'values': list(csv.reader(open(csv_path, encoding='shift-jis')))}
     )
 
-def calc_profit_and_loss():
-    df_all_org = pd.read_csv("../csv/all.csv", encoding="shift-jis", sep=',')
-    portfolio_all_csv_path = Path("../csv/portfolio/portfolio_all.csv")
+def calc_profit_and_loss(assets):
+    df_all_org = pd.read_csv(root_csv_dir / "all.csv", encoding="shift-jis", sep=',')
+    portfolio_all_csv_path = portfolio_csv_dir / "portfolio_all.csv"
     if portfolio_all_csv_path.exists():
         df_all_with_profit_and_loss = pd.read_csv(portfolio_all_csv_path, encoding="shift-jis", sep=',')
     else:
@@ -35,10 +37,9 @@ def calc_profit_and_loss():
     df_all_with_profit_and_loss = pd.merge(df_all_org, df_all_with_profit_and_loss, how='left')
     df_all_with_profit_and_loss.drop_duplicates(subset='日付', inplace=True)
     df_all_with_profit_and_loss.set_index('日付', inplace=True)
-    portfolio  = {'損益_投資信託':'../csv/portfolio/portfolio_det_mf.csv',
-                '損益_年金':'../csv/portfolio/portfolio_det_pns.csv',
-                '損益_株式（現物）':'../csv/portfolio/portfolio_det_eq.csv'}
-    for column_name, portfolio_csv_path in portfolio.items():
+    portfolios = [{asset['column_name']: portfolio_csv_dir / f"{asset['id']}.csv"} for asset in assets if asset['column_name'] != '']
+    for portfolio in portfolios:
+        column_name, portfolio_csv_path = list(portfolio.items())[0]
         df = pd.read_csv(portfolio_csv_path, encoding="shift-jis", sep=',')
         df = df.dropna(subset=['評価損益'])
         df['評価損益'] = df['評価損益'].apply(lambda x: x.strip('円') if '円' in x else x)
@@ -46,23 +47,23 @@ def calc_profit_and_loss():
         profit_and_loss = df['評価損益'].sum()
         if not column_name in df_all_with_profit_and_loss.columns:
             df_all_with_profit_and_loss[column_name] = 0
-        else:
-            df_all_with_profit_and_loss.at[df_all_with_profit_and_loss.index[0], column_name] = profit_and_loss
-    df_all_with_profit_and_loss.to_csv('../csv/portfolio/portfolio_all.csv', encoding="shift-jis")
+        df_all_with_profit_and_loss.at[df_all_with_profit_and_loss.index[0], column_name] = profit_and_loss
+    df_all_with_profit_and_loss.to_csv(portfolio_csv_dir / 'portfolio_all.csv', encoding="shift-jis")
     
 
 def main():
     config_ini = configparser.ConfigParser()
     config_ini.read('config.ini', encoding='utf-8')
     spreadsheet_key = config_ini.get('SPREAD_SHEET', 'Key')
-    calc_profit_and_loss()
+    assets = [dict(config_ini.items(section)) for section in config_ini.sections() if "asset_" in section]
     
+    calc_profit_and_loss(assets)
+
+    assets.append({'id': 'portfolio_all', 'sheet_name': config_ini.get('SPREAD_SHEET', 'Worksheet_name')})
     workbook = connect_gspread(json_path="client_secret.json", spreadsheet_key=spreadsheet_key)
-    update_sheet(workbook, "_資産推移データ(自動入力)", "../csv/portfolio/portfolio_all.csv")
-    update_sheet(workbook, "_預金・現金・暗号資産", "../csv/portfolio/portfolio_det_depo.csv")
-    update_sheet(workbook, "_株式（現物）", "../csv/portfolio/portfolio_det_eq.csv")
-    update_sheet(workbook, "_投資信託", "../csv/portfolio/portfolio_det_mf.csv")
-    update_sheet(workbook, "_年金", "../csv/portfolio/portfolio_det_pns.csv")
+    for asset in assets:
+        update_sheet(workbook, asset['sheet_name'], portfolio_csv_dir / f"{asset['id']}.csv")
+        print(asset['sheet_name'], portfolio_csv_dir / f"{asset['id']}.csv")
 
 
 if __name__ == "__main__":

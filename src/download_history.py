@@ -114,11 +114,13 @@ def main():
     config_ini.read('config.ini', encoding='utf-8')
     email = config_ini.get('MONEYFORWARD', 'Email')
     password = config_ini.get('MONEYFORWARD', 'Password')
+    assets = [dict(config_ini.items(section)) for section in config_ini.sections() if "asset_" in section]
+    
     mf = Moneyforward()
     try:
         mf.login(email=email, password=password)
         mf.download_history()
-        mf.get_valuation_profit_and_loss_multiple(asset_id_list=["portfolio_det_depo", "portfolio_det_eq", "portfolio_det_mf", "portfolio_det_pns"])
+        mf.get_valuation_profit_and_loss_multiple(asset_id_list=[asset['id'] for asset in assets])
     finally:
         mf.close()
 
