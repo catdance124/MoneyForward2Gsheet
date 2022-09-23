@@ -105,7 +105,7 @@ Place the obtained json file as `src/client_secret.json` .
 After running, kill the remaining chrome processes.
 ```
 # crontab -e
-0 * * * * export DISPLAY=localhost:99; cd /home/opc/MoneyForward2Gsheet/src; python3 mf2gs.py;  ps aux | grep chromedriver | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh;  ps aux | grep "Google Chrome" | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh;  ps aux | grep "Google Helper" | grep -v grep | awk '{ print "sudo kill -9", $2 }' | sh
+0 * * * * export DISPLAY=localhost:99; export LANG=ja_JP.UTF-8; cd /home/opc/MoneyForward2Gsheet/src; date >> log; python3 mf2gs.py >> log 2>&1;
 ```
 
 ### result
