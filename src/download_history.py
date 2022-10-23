@@ -7,6 +7,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
+from my_logging import get_my_logger
+logger = get_my_logger(__name__)
 
 
 class Moneyforward():
@@ -61,7 +63,7 @@ class Moneyforward():
         portfolio_dir.mkdir(exist_ok=True)
         save_path = Path(portfolio_dir/f'{asset_id}.csv')
         df.to_csv(save_path, encoding="shift-jis")
-        print(f"Downloaded {save_path}")
+        logger.info(f"Downloaded {save_path}")
 
     def download_history(self):
         history_url = "https://moneyforward.com/bs/history"
@@ -77,7 +79,7 @@ class Moneyforward():
                     month_csv = f"https://moneyforward.com/bs/history/list/{month}/monthly/csv"
                     self.driver.get(month_csv)
                     self._rename_latest_file(save_path)
-                    print(f"Downloaded {save_path}")
+                    logger.info(f"Downloaded {save_path}")
         # download this month csv
         this_month_csv = "https://moneyforward.com/bs/history/csv"
         save_path = Path(self.csv_dir/"this_month.csv")
@@ -85,7 +87,7 @@ class Moneyforward():
             save_path.unlink()
         self.driver.get(this_month_csv)
         self._rename_latest_file(save_path)
-        print(f"Downloaded {save_path}")
+        logger.info(f"Downloaded {save_path}")
         # create concatenated csv -> all.csv
         self._concat_csv()
 
