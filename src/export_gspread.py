@@ -5,6 +5,9 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import numpy as np
+from my_logging import get_my_logger
+logger = get_my_logger(__name__)
+
 
 root_csv_dir = Path('../csv')
 portfolio_csv_dir = root_csv_dir / 'portfolio'
@@ -63,7 +66,7 @@ def main():
     workbook = connect_gspread(json_path="client_secret.json", spreadsheet_key=spreadsheet_key)
     for asset in assets:
         update_sheet(workbook, asset['sheet_name'], portfolio_csv_dir / f"{asset['id']}.csv")
-        print(asset['sheet_name'], portfolio_csv_dir / f"{asset['id']}.csv")
+        logger.info(asset['sheet_name'], portfolio_csv_dir / f"{asset['id']}.csv")
 
 
 if __name__ == "__main__":
