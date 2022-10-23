@@ -11,4 +11,4 @@ services:
     volumes:
       - ./:/opt/app
     working_dir: /opt/app/src
-    command: bash -c "xvfb-run --auto-servernum --server-args='-screen 0, 1024x768x24' -- python mf2gs.py > /dev/null 2>&1"
+    command: bash -c "xvfb-run --auto-servernum --server-args='-screen 0, 1024x768x24' -- python mf2gs.py > /dev/null"
