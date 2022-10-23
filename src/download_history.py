@@ -6,7 +6,6 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from subprocess import CREATE_NO_WINDOW
 import pandas as pd
 
 
@@ -18,12 +17,13 @@ class Moneyforward():
     def __init__(self):
         self.csv_dir = Path("../csv")
         self.csv_dir.mkdir(exist_ok=True)
+        self.download_dir = Path("../download")
+        self.download_dir.mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
-        options.add_experimental_option("prefs", {"download.default_directory": str(self.csv_dir.resolve())})
+        options.add_experimental_option("prefs", {"download.default_directory": str(self.download_dir.resolve())})
         options.add_argument("--no-sandbox")
-        service = Service(ChromeDriverManager().install())
-        service.creationflags = CREATE_NO_WINDOW
-        self.driver = webdriver.Chrome(service=service, options=options)
+        options.add_argument("--disable-dev-shm-usage")
+        self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
     
     def close(self):
         self.driver.quit()
@@ -91,8 +91,8 @@ class Moneyforward():
 
     def _rename_latest_file(self, new_path):
         time.sleep(2)
-        csv_list = self.csv_dir.glob('*[!all].csv')
-        latest_csv = max(csv_list, key=lambda p: p.stat().st_ctime)
+        download_files = self.download_dir.glob('*')
+        latest_csv = max(download_files, key=lambda p: p.stat().st_ctime)
         latest_csv.rename(new_path)
     
     def _concat_csv(self):
