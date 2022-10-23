@@ -20,6 +20,7 @@ ENV LANG ja_JP.UTF-8
 RUN apt-get install -y --no-install-recommends locales && \
     locale-gen ja_JP.UTF-8 && \
     apt-get install -y --no-install-recommends fonts-ipafont
+ENV TZ Asia/Tokyo
 
 # install virtual display
 RUN apt-get install xvfb -y
