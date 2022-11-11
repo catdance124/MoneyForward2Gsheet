@@ -94,16 +94,15 @@ class Moneyforward():
         self._concat_csv()
 
     def _rename_latest_file(self, new_path):
+        def _convert_shiftJIS_to_utf8(cp932_csv, utf8_csv):
+            with open(cp932_csv, encoding='cp932',errors='replace') as fin:
+                with open(utf8_csv, 'w', encoding='utf-8',errors='replace') as fout:
+                    fout.write(fin.read())
         time.sleep(2)
         download_files = self.download_dir.glob('*')
         latest_csv = max(download_files, key=lambda p: p.stat().st_ctime)
-        self._convert_shiftJIS_to_utf8(latest_csv, new_path)
+        _convert_shiftJIS_to_utf8(latest_csv, new_path)
         latest_csv.unlink()
-
-    def _convert_shiftJIS_to_utf8(self, old_path, new_path):
-        with open(old_path, encoding='cp932',errors='replace') as fin:
-            with open(new_path, 'w', encoding='utf-8',errors='replace') as fout:
-                fout.write(fin.read())
     
     def _concat_csv(self):
         csv_list = sorted(self.csv_dir.glob('*[!all].csv'))
