@@ -16,9 +16,11 @@ class Moneyforward():
     docstring:hogehoge
     後で書く
     """
-    def __init__(self):
-        self.csv_dir = Path("../csv")
-        self.csv_dir.mkdir(exist_ok=True)
+    def __init__(self, email, password):
+        self.email = email
+        self.password = password
+        self.csv_dir = Path(f"../csv")
+        self.csv_dir.mkdir(exist_ok=True, parents=True)
         self.download_dir = Path("../download")
         self.download_dir.mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
@@ -30,18 +32,18 @@ class Moneyforward():
     def close(self):
         self.driver.quit()
 
-    def login(self, email, password):
+    def login(self):
         login_url = "https://moneyforward.com/sign_in"
         self.driver.get(login_url)
         self.driver.find_element(By.LINK_TEXT, "メールアドレスでログイン").click()
         elem = self.driver.find_element(By.NAME, "mfid_user[email]")
         elem.clear()
-        elem.send_keys(email)
+        elem.send_keys(self.email)
         elem.submit()
         time.sleep(3)
         elem = self.driver.find_element(By.NAME, "mfid_user[password]")
         elem.clear()
-        elem.send_keys(password)
+        elem.send_keys(self.password)
         elem.submit()
     
     def get_valuation_profit_and_loss_multiple(self, asset_id_list):
@@ -62,7 +64,7 @@ class Moneyforward():
         portfolio_dir = Path(self.csv_dir/'portfolio')
         portfolio_dir.mkdir(exist_ok=True)
         save_path = Path(portfolio_dir/f'{asset_id}.csv')
-        df.to_csv(save_path, encoding="shift-jis")
+        df.to_csv(save_path, encoding="utf-8")
         logger.info(f"Downloaded {save_path}")
 
     def download_history(self):
@@ -95,20 +97,26 @@ class Moneyforward():
         time.sleep(2)
         download_files = self.download_dir.glob('*')
         latest_csv = max(download_files, key=lambda p: p.stat().st_ctime)
-        latest_csv.rename(new_path)
+        self._convert_shiftJIS_to_utf8(latest_csv, new_path)
+        latest_csv.unlink()
+
+    def _convert_shiftJIS_to_utf8(self, old_path, new_path):
+        with open(old_path, encoding='cp932',errors='replace') as fin:
+            with open(new_path, 'w', encoding='utf-8',errors='replace') as fout:
+                fout.write(fin.read())
     
     def _concat_csv(self):
         csv_list = sorted(self.csv_dir.glob('*[!all].csv'))
         df_list = []
         for csv_path in csv_list:
-            df = pd.read_csv(csv_path, encoding="shift-jis", sep=',')
+            df = pd.read_csv(csv_path, encoding="utf-8", sep=',')
             df_list.append(df)
         df_concat = pd.concat(df_list)
         df_concat.drop_duplicates(subset='日付', inplace=True)
         df_concat.set_index('日付', inplace=True)
         df_concat.sort_index(inplace=True, ascending=False)
         df_concat.fillna(0, inplace=True)
-        df_concat.to_csv(Path(self.csv_dir/'all.csv'), encoding="shift-jis")
+        df_concat.to_csv(Path(self.csv_dir/'all.csv'), encoding="utf-8")
 
 
 def main():
@@ -118,9 +126,9 @@ def main():
     password = config_ini.get('MONEYFORWARD', 'Password')
     assets = [dict(config_ini.items(section)) for section in config_ini.sections() if "asset_" in section]
     
-    mf = Moneyforward()
+    mf = Moneyforward(email=email, password=password)
     try:
-        mf.login(email=email, password=password)
+        mf.login()
         mf.download_history()
         mf.get_valuation_profit_and_loss_multiple(asset_id_list=[asset['id'] for asset in assets])
     finally:
