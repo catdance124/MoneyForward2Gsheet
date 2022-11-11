@@ -38,8 +38,9 @@ def main():
     assets.append({'id': 'portfolio_all', 'sheet_name': config_ini.get('SPREAD_SHEET', 'Worksheet_name')})
     workbook = connect_gspread(json_path="client_secret.json", spreadsheet_key=spreadsheet_key)
     for asset in assets:
-        update_sheet(workbook, asset['sheet_name'], portfolio_csv_dir / f"{asset['id']}.csv")
-        logger.info(asset['sheet_name'], portfolio_csv_dir / f"{asset['id']}.csv")
+        csv_path = portfolio_csv_dir / f"{asset['id']}.csv"
+        update_sheet(workbook, asset['sheet_name'], csv_path)
+        logger.info(f"{asset['sheet_name']}: {csv_path}")
 
 
 if __name__ == "__main__":
