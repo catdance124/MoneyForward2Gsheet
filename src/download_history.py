@@ -13,14 +13,19 @@ logger = get_my_logger(__name__)
 
 class Moneyforward():
     """
-    docstring:hogehoge
-    後で書く
+    Moneyforwardから各種情報を取得する
+    - download_history
+        -  資産推移を取得
+    - get_valuation_profit_and_loss
+        - 資産内訳（損益）を取得
     """
     def __init__(self, email, password):
         self.email = email
         self.password = password
         self.csv_dir = Path(f"../csv")
         self.csv_dir.mkdir(exist_ok=True, parents=True)
+        self.portfolio_dir = Path(self.csv_dir/'portfolio')
+        self.portfolio_dir.mkdir(exist_ok=True)
         self.download_dir = Path("../download")
         self.download_dir.mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
@@ -55,15 +60,14 @@ class Moneyforward():
         self.driver.get(portfolio_url)
         elems = self.driver.find_elements(By.XPATH, f'//*[@id="{asset_id}"]//table')
         if len(elems) == 0:
-            raise "no portfolio elements"
+            logger.info(f"no portfolio elements: {asset_id}")
+            return
         elem = elems[0]
         ths = [th.text for th in elem.find_elements(By.XPATH, "thead//th")]
         trs = elem.find_elements(By.XPATH, "tbody/tr")
         tds = [[td.text for td in tr.find_elements(By.XPATH, "td")] for tr in trs]
         df = pd.DataFrame(tds, columns=ths)
-        portfolio_dir = Path(self.csv_dir/'portfolio')
-        portfolio_dir.mkdir(exist_ok=True)
-        save_path = Path(portfolio_dir/f'{asset_id}.csv')
+        save_path = self.portfolio_dir / f'{asset_id}.csv'
         df.to_csv(save_path, encoding="utf-8")
         logger.info(f"Downloaded {save_path}")
 
@@ -76,7 +80,7 @@ class Moneyforward():
             href = elem.get_attribute("href")
             if "monthly" in href:
                 month = re.search(r'\d{4}-\d{2}-\d{2}', href).group()
-                save_path = Path(self.csv_dir/f"{month}.csv")
+                save_path = self.csv_dir / f"{month}.csv"
                 if not save_path.exists():
                     month_csv = f"https://moneyforward.com/bs/history/list/{month}/monthly/csv"
                     self.driver.get(month_csv)
@@ -84,7 +88,7 @@ class Moneyforward():
                     logger.info(f"Downloaded {save_path}")
         # download this month csv
         this_month_csv = "https://moneyforward.com/bs/history/csv"
-        save_path = Path(self.csv_dir/"this_month.csv")
+        save_path = self.csv_dir / "this_month.csv"
         if save_path.exists():
             save_path.unlink()
         self.driver.get(this_month_csv)
@@ -115,7 +119,7 @@ class Moneyforward():
         df_concat.set_index('日付', inplace=True)
         df_concat.sort_index(inplace=True, ascending=False)
         df_concat.fillna(0, inplace=True)
-        df_concat.to_csv(Path(self.csv_dir/'all.csv'), encoding="utf-8")
+        df_concat.to_csv(self.csv_dir / 'all.csv', encoding="utf-8")
 
 
 def main():
