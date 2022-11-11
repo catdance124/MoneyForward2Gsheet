@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
+import numpy as np
 from my_logging import get_my_logger
 logger = get_my_logger(__name__)
 
@@ -15,9 +16,11 @@ class Moneyforward():
     """
     Moneyforwardから各種情報を取得する
     - download_history
-        -  資産推移を取得
+        - 資産推移を取得
     - get_valuation_profit_and_loss
         - 資産内訳（損益）を取得
+    - calc_profit_and_loss
+        - 資産推移と資産内訳（損益）を結合
     """
     def __init__(self, email, password):
         self.email = email
@@ -121,6 +124,28 @@ class Moneyforward():
         df_concat.fillna(0, inplace=True)
         df_concat.to_csv(self.csv_dir / 'all.csv', encoding="utf-8")
 
+    def calc_profit_and_loss(self, assets):
+        df_all_org = pd.read_csv(self.csv_dir / "all.csv", encoding="utf-8", sep=',')
+        csv_path = self.portfolio_dir / "portfolio_all.csv"
+        if csv_path.exists():
+            df_merged = pd.read_csv(csv_path, encoding="utf-8", sep=',')
+        else:
+            df_merged = df_all_org
+        df_merged = pd.merge(df_all_org, df_merged, how='left')
+        df_merged.drop_duplicates(subset='日付', inplace=True)
+        df_merged.set_index('日付', inplace=True)
+        portfolio_sets = [[asset['column_name'], self.portfolio_dir / f"{asset['id']}.csv"] for asset in assets if asset['column_name'] != '']
+        for portfolio_set in portfolio_sets:
+            column_name, portfolio_csv_path = portfolio_set
+            df_tmp = pd.read_csv(portfolio_csv_path, encoding="utf-8", sep=',')
+            df_tmp = df_tmp.dropna(subset=['評価損益'])
+            df_tmp['評価損益'] = df_tmp['評価損益'].apply(lambda x: x.strip('円') if '円' in x else x).str.replace(',','').astype(np.int)
+            profit_and_loss = df_tmp['評価損益'].sum()
+            if not column_name in df_merged.columns:
+                df_merged[column_name] = 0
+            df_merged.at[df_merged.index[0], column_name] = profit_and_loss
+        df_merged.to_csv(csv_path, encoding="utf-8")
+
 
 def main():
     config_ini = configparser.ConfigParser()
@@ -134,6 +159,7 @@ def main():
         mf.login()
         mf.download_history()
         mf.get_valuation_profit_and_loss_multiple(asset_id_list=[asset['id'] for asset in assets])
+        mf.calc_profit_and_loss(assets)
     finally:
         mf.close()
 
