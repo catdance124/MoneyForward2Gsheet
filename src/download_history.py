@@ -1,6 +1,7 @@
 import configparser
 import re
 import time
+import json
 from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -25,7 +26,7 @@ class Moneyforward():
     def __init__(self, email, password):
         self.email = email
         self.password = password
-        self.csv_dir = root_csv_dir
+        self.csv_dir = root_csv_dir / email
         self.csv_dir.mkdir(exist_ok=True, parents=True)
         self.portfolio_dir = self.csv_dir / 'portfolio'
         self.portfolio_dir.mkdir(exist_ok=True)
@@ -152,18 +153,21 @@ class Moneyforward():
 def main():
     config_ini = configparser.ConfigParser()
     config_ini.read('config.ini', encoding='utf-8')
-    email = config_ini.get('MONEYFORWARD', 'Email')
-    password = config_ini.get('MONEYFORWARD', 'Password')
+    emails = json.loads(config_ini.get("MONEYFORWARD","Email"))
+    passwords = json.loads(config_ini.get("MONEYFORWARD","Password"))
     assets = [dict(config_ini.items(section)) for section in config_ini.sections() if "asset_" in section]
     
-    mf = Moneyforward(email=email, password=password)
-    try:
-        mf.login()
-        mf.download_history()
-        mf.get_valuation_profit_and_loss_multiple(asset_id_list=[asset['id'] for asset in assets])
-        mf.calc_profit_and_loss(assets)
-    finally:
-        mf.close()
+    # download each files
+    for email, password in zip(emails, passwords):
+        mf = Moneyforward(email=email, password=password)
+        try:
+            mf.login()
+            mf.download_history()
+            mf.get_valuation_profit_and_loss_multiple(asset_id_list=[asset['id'] for asset in assets])
+            mf.calc_profit_and_loss(assets)
+        finally:
+            mf.close()
+
 
 if __name__ == "__main__":
     main()
