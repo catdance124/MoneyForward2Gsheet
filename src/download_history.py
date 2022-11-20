@@ -201,7 +201,7 @@ def main():
         portfolio_all = pd.read_csv(portfolio_all_csv_path, encoding="utf-8", sep=',')
     else:
         portfolio_all = new_portfolio_all
-    portfolio_all = pd.merge(portfolio_all, new_portfolio_all, how='outer')
+    portfolio_all = pd.merge(new_portfolio_all, portfolio_all, how='outer')
     portfolio_all.drop_duplicates(subset='日付', inplace=True)
     portfolio_all.set_index('日付', inplace=True)
     portfolio_all.sort_index(inplace=True, ascending=False)
