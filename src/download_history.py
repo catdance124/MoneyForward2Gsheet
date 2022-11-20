@@ -170,6 +170,7 @@ def concat_files(assets):
         df_concat = df_concat.add(df, fill_value=0) if df_concat is not None else df
     df_concat.sort_index(inplace=True, ascending=False)
     df_concat.to_csv(output_path, encoding="utf-8")
+    return output_path
 
 
 def main():
@@ -191,7 +192,20 @@ def main():
             mf.close()
     
     # concat each files
-    concat_files(assets)
+    new_portfolio_all_csv_path = concat_files(assets)
+    new_portfolio_all = pd.read_csv(new_portfolio_all_csv_path, encoding="utf-8", sep=',')
+
+    # generate result csv
+    portfolio_all_csv_path = root_csv_dir / "portfolio_all.csv"
+    if portfolio_all_csv_path.exists():
+        portfolio_all = pd.read_csv(portfolio_all_csv_path, encoding="utf-8", sep=',')
+    else:
+        portfolio_all = new_portfolio_all
+    portfolio_all = pd.merge(portfolio_all, new_portfolio_all, how='outer')
+    portfolio_all.drop_duplicates(subset='日付', inplace=True)
+    portfolio_all.set_index('日付', inplace=True)
+    portfolio_all.sort_index(inplace=True, ascending=False)
+    portfolio_all.to_csv(portfolio_all_csv_path, encoding="utf-8")
 
 
 if __name__ == "__main__":
