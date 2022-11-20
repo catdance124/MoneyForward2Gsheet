@@ -4,13 +4,13 @@ import time
 from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
 import numpy as np
 from my_logging import get_my_logger
 logger = get_my_logger(__name__)
 
+root_csv_dir = Path("../csv")
 
 class Moneyforward():
     """
@@ -25,9 +25,9 @@ class Moneyforward():
     def __init__(self, email, password):
         self.email = email
         self.password = password
-        self.csv_dir = Path(f"../csv")
+        self.csv_dir = root_csv_dir
         self.csv_dir.mkdir(exist_ok=True, parents=True)
-        self.portfolio_dir = Path(self.csv_dir/'portfolio')
+        self.portfolio_dir = self.csv_dir / 'portfolio'
         self.portfolio_dir.mkdir(exist_ok=True)
         self.download_dir = Path("../download")
         self.download_dir.mkdir(exist_ok=True)
@@ -71,7 +71,7 @@ class Moneyforward():
         tds = [[td.text for td in tr.find_elements(By.XPATH, "td")] for tr in trs]
         df = pd.DataFrame(tds, columns=ths)
         save_path = self.portfolio_dir / f'{asset_id}.csv'
-        df.to_csv(save_path, encoding="utf-8")
+        df.to_csv(save_path, encoding="utf-8", index=False)
         logger.info(f"Downloaded {save_path}")
 
     def download_history(self):
@@ -137,6 +137,8 @@ class Moneyforward():
         portfolio_sets = [[asset['column_name'], self.portfolio_dir / f"{asset['id']}.csv"] for asset in assets if asset['column_name'] != '']
         for portfolio_set in portfolio_sets:
             column_name, portfolio_csv_path = portfolio_set
+            if not portfolio_csv_path.exists():
+                continue
             df_tmp = pd.read_csv(portfolio_csv_path, encoding="utf-8", sep=',')
             df_tmp = df_tmp.dropna(subset=['評価損益'])
             df_tmp['評価損益'] = df_tmp['評価損益'].apply(lambda x: x.strip('円') if '円' in x else x).str.replace(',','').astype(np.int)
