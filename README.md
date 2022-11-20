@@ -7,9 +7,28 @@ Downloading asset trends📈 from MoneyForward, and exporting them to google spr
 ## setting
 fill in `src/config.ini`
 ```ini
+# case of single account
 [MONEYFORWARD]
-Email = <REGISTERED EMAIL>
-Password = <REGISTERED PASSWORD>
+Email = [
+    "<REGISTERED EMAIL>"
+]
+Password = [
+    "<REGISTERED PASSWORD>"
+]
+
+# case of multi account
+[MONEYFORWARD]
+Email = [
+    "<REGISTERED EMAIL 1>",
+    "<REGISTERED EMAIL 2>",
+    "<REGISTERED EMAIL 3>"
+]
+Password = [
+    "<REGISTERED PASSWORD 1>",
+    "<REGISTERED PASSWORD 2>",
+    "<REGISTERED PASSWORD 3>"
+]
+
 
 [SPREAD_SHEET]
 Key = <SPREADSHEET KEY got from URL>

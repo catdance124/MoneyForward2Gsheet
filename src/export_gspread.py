@@ -8,7 +8,7 @@ logger = get_my_logger(__name__)
 
 
 root_csv_dir = Path('../csv')
-portfolio_csv_dir = root_csv_dir / 'portfolio'
+concat_csv_dir = root_csv_dir / 'concat'
 
 def connect_gspread(json_path, spreadsheet_key):
     scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
@@ -33,14 +33,22 @@ def main():
     config_ini = configparser.ConfigParser()
     config_ini.read('config.ini', encoding='utf-8')
     spreadsheet_key = config_ini.get('SPREAD_SHEET', 'Key')
-    assets = [dict(config_ini.items(section)) for section in config_ini.sections() if "asset_" in section]
-    
-    assets.append({'id': 'portfolio_all', 'sheet_name': config_ini.get('SPREAD_SHEET', 'Worksheet_name')})
     workbook = connect_gspread(json_path="client_secret.json", spreadsheet_key=spreadsheet_key)
+
+    ## asset
+    assets = [dict(config_ini.items(section)) for section in config_ini.sections() if "asset_" in section]
     for asset in assets:
-        csv_path = portfolio_csv_dir / f"{asset['id']}.csv"
+        csv_path = concat_csv_dir / f"{asset['id']}.csv"
+        if not csv_path.exists():
+            continue
         update_sheet(workbook, asset['sheet_name'], csv_path)
         logger.info(f"{asset['sheet_name']}: {csv_path}")
+    
+    ## history
+    csv_path = root_csv_dir / "portfolio_all.csv"
+    sheet_name = config_ini.get('SPREAD_SHEET', 'Worksheet_name')
+    update_sheet(workbook, sheet_name, csv_path)
+    logger.info(f"{sheet_name}: {csv_path}")
 
 
 if __name__ == "__main__":
