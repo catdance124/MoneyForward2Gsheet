@@ -2,6 +2,7 @@ import configparser
 import re
 import time
 import json
+import shutil
 from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -40,6 +41,7 @@ class Moneyforward():
     
     def close(self):
         self.driver.quit()
+        shutil.rmtree(self.download_dir)
 
     def login(self):
         login_url = "https://moneyforward.com/sign_in"
@@ -64,7 +66,7 @@ class Moneyforward():
         self.driver.get(portfolio_url)
         elems = self.driver.find_elements(By.XPATH, f'//*[@id="{asset_id}"]//table')
         if len(elems) == 0:
-            logger.info(f"no portfolio elements: {asset_id}")
+            logger.debug(f"no portfolio elements: {asset_id}")
             return
         elem = elems[0]
         ths = [th.text for th in elem.find_elements(By.XPATH, "thead//th")]
