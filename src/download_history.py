@@ -150,6 +150,28 @@ class Moneyforward():
         df_merged.to_csv(csv_path, encoding="utf-8")
 
 
+def concat_files(assets):
+    concat_csv_dir = root_csv_dir / "concat"
+    concat_csv_dir.mkdir(exist_ok=True, parents=True)
+    ## asset files
+    for asset in assets:
+        df_list = []
+        for asset_csv_path in root_csv_dir.glob(f"*/portfolio/{asset['id']}.csv"):
+            df = pd.read_csv(asset_csv_path, encoding="utf-8", sep=',')
+            df_list.append(df)
+        df_concat = pd.concat(df_list)
+        df_concat.to_csv(concat_csv_dir / f"{asset['id']}.csv", encoding="utf-8", index=False)
+    ## history files
+    output_path = concat_csv_dir / "portfolio_all.csv"
+    df_concat = None
+    for portfolio_all_csv_path in root_csv_dir.glob(f"*/portfolio/portfolio_all.csv"):
+        df = pd.read_csv(portfolio_all_csv_path, encoding="utf-8", sep=',')
+        df.set_index('日付', inplace=True)
+        df_concat = df_concat.add(df, fill_value=0) if df_concat is not None else df
+    df_concat.sort_index(inplace=True, ascending=False)
+    df_concat.to_csv(output_path, encoding="utf-8")
+
+
 def main():
     config_ini = configparser.ConfigParser()
     config_ini.read('config.ini', encoding='utf-8')
@@ -167,6 +189,9 @@ def main():
             mf.calc_profit_and_loss(assets)
         finally:
             mf.close()
+    
+    # concat each files
+    concat_files(assets)
 
 
 if __name__ == "__main__":
