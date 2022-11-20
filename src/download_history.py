@@ -123,6 +123,7 @@ class Moneyforward():
         df_concat.set_index('日付', inplace=True)
         df_concat.sort_index(inplace=True, ascending=False)
         df_concat.fillna(0, inplace=True)
+        df_concat = df_concat.add_prefix(':')
         df_concat.to_csv(self.csv_dir / 'all.csv', encoding="utf-8")
 
     def calc_profit_and_loss(self, assets):
@@ -204,6 +205,7 @@ def main():
     portfolio_all = pd.merge(new_portfolio_all, portfolio_all, how='outer')
     portfolio_all.drop_duplicates(subset='日付', inplace=True)
     portfolio_all.set_index('日付', inplace=True)
+    portfolio_all.sort_index(inplace=True, axis='columns')
     portfolio_all.sort_index(inplace=True, ascending=False)
     portfolio_all.to_csv(portfolio_all_csv_path, encoding="utf-8")
 
