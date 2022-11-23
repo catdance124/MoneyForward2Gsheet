@@ -1,3 +1,4 @@
+from typing import Any
 import configparser
 import csv
 from pathlib import Path
@@ -10,14 +11,41 @@ logger = get_my_logger(__name__)
 root_csv_dir = Path('../csv')
 concat_csv_dir = root_csv_dir / 'concat'
 
-def connect_gspread(json_path, spreadsheet_key):
+def connect_gspread(json_path: str, spreadsheet_key: str) -> Any:
+    """
+    スプレッドシートに接続する
+
+    Parameters
+    ----------
+    json_path: str
+        Credentialsを作成するためのjsonのパス
+    spreadsheet_key: str
+        ブラウザの URL に表示されるスプレッドシートのキー
+
+    Returns
+    -------
+    workbook : Spreadsheet
+        スプレッドシートオブジェクト
+    """
     scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
     credentials = ServiceAccountCredentials.from_json_keyfile_name(json_path, scope)
     gc = gspread.authorize(credentials)
     workbook = gc.open_by_key(spreadsheet_key)
     return workbook
 
-def update_sheet(workbook, worksheet_name, csv_path):
+def update_sheet(workbook: Any, worksheet_name: str, csv_path: Path) -> None:
+    """
+    スプレッドシートにcsvの内容を反映する
+
+    Parameters
+    ----------
+    workbook: Spreadsheet
+        スプレッドシートオブジェクト
+    worksheet_name: str
+        対象のワークシート名
+    csv_path: Path
+        対象のcsvのパス
+    """
     if not worksheet_name in [worksheet.title for worksheet in workbook.worksheets()]:
         workbook.add_worksheet(title=worksheet_name, rows=50, cols=50)
     ws = workbook.worksheet(worksheet_name)
@@ -29,7 +57,7 @@ def update_sheet(workbook, worksheet_name, csv_path):
     )
     
 
-def main():
+def main() -> None:
     config_ini = configparser.ConfigParser()
     config_ini.read('config.ini', encoding='utf-8')
     spreadsheet_key = config_ini.get('SPREAD_SHEET', 'Key')

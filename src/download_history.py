@@ -17,14 +17,33 @@ root_csv_dir = Path("../csv")
 class Moneyforward():
     """
     Moneyforwardから各種情報を取得する
-    - download_history
-        - 資産推移を取得
-    - get_valuation_profit_and_loss
-        - 資産内訳（損益）を取得
-    - calc_profit_and_loss
-        - 資産推移と資産内訳（損益）を結合
+    
+    Attributes
+    ----------
+    email : str
+        ログイン用メールアドレス
+    password : str
+        ログイン用パスワード
+    csv_dir : Path
+        ユーザごとのcsvを保持するルートディレクトリ
+    portfolio_dir : Path
+        ユーザごとのportfolioに関するcsvを保持するディレクトリ
+    history_dir : Path
+        ユーザごとのhistoryに関するcsvを保持するディレクトリ
+    download_dir : Path
+        csvをダウンロードする際に一時保存するディレクトリ
+    driver : WebDriver
+        seleniumが利用するwebdriver
     """
-    def __init__(self, email, password):
+    def __init__(self, email: str, password: str) -> None:
+        """
+        Parameters
+        ----------
+        email : str
+            ログイン用メールアドレス
+        password : str
+            ログイン用パスワード
+        """
         self.email = email
         self.password = password
         self.csv_dir = root_csv_dir / email
@@ -41,11 +60,17 @@ class Moneyforward():
         options.add_argument("--disable-dev-shm-usage")
         self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
     
-    def close(self):
+    def close(self) -> None:
+        """
+        webdriverの終了処理を行う。
+        """
         self.driver.quit()
         shutil.rmtree(self.download_dir)
 
-    def login(self):
+    def login(self) -> None:
+        """
+        MoneyForwardのログイン処理を実施する
+        """
         login_url = "https://moneyforward.com/sign_in"
         self.driver.get(login_url)
         self.driver.find_element(By.LINK_TEXT, "メールアドレスでログイン").click()
@@ -58,12 +83,16 @@ class Moneyforward():
         elem.clear()
         elem.send_keys(self.password)
         elem.submit()
-    
-    def get_valuation_profit_and_loss_multiple(self, asset_id_list):
-        for asset_id in asset_id_list:
-            self.get_valuation_profit_and_loss(asset_id)
 
-    def get_valuation_profit_and_loss(self, asset_id):
+    def get_valuation_profit_and_loss(self, asset_id: str) -> None:
+        """
+        各assetの資産内訳（損益）を取得する
+
+        Parameters
+        ----------
+        asset_id : str
+            html要素の特定に利用するasset_id
+        """
         portfolio_url = "https://moneyforward.com/bs/portfolio"
         self.driver.get(portfolio_url)
         elems = self.driver.find_elements(By.XPATH, f'//*[@id="{asset_id}"]//table')
@@ -79,7 +108,10 @@ class Moneyforward():
         df.to_csv(save_path, encoding="utf-8", index=False)
         logger.info(f"Downloaded {save_path}")
 
-    def download_history(self):
+    def download_history(self) -> None:
+        """
+        各月の資産推移を取得する
+        """
         history_url = "https://moneyforward.com/bs/history"
         self.driver.get(history_url)
         elems = self.driver.find_elements(By.XPATH, '//*[@id="bs-history"]/*/table/tbody/tr/td/a')
@@ -105,7 +137,16 @@ class Moneyforward():
         # create concatenated csv
         self._concat_csv()
 
-    def _rename_latest_file(self, new_path):
+    def _rename_latest_file(self, new_path: Path) -> None:
+        """
+        ダウンロードディレクトリの最新ファイルをリネームし再配置する
+        同時に文字コード変換も実施する
+
+        Parameters
+        ----------
+        new_path : Path
+            新しく保存したいパス
+        """
         def _convert_shiftJIS_to_utf8(cp932_csv, utf8_csv):
             with open(cp932_csv, encoding='cp932',errors='replace') as fin:
                 with open(utf8_csv, 'w', encoding='utf-8',errors='replace') as fout:
@@ -116,7 +157,10 @@ class Moneyforward():
         _convert_shiftJIS_to_utf8(latest_csv, new_path)
         latest_csv.unlink()
     
-    def _concat_csv(self):
+    def _concat_csv(self) -> None:
+        """
+        ダウンロードした各月の資産推移を結合する
+        """
         csv_list = sorted(self.history_dir.glob('*.csv'))
         df_list = []
         for csv_path in csv_list:
@@ -130,7 +174,15 @@ class Moneyforward():
         df_concat = df_concat.add_prefix(':')
         df_concat.to_csv(self.csv_dir / 'all_history.csv', encoding="utf-8")
 
-    def calc_profit_and_loss(self, assets):
+    def calc_profit_and_loss(self, assets: list) -> None:
+        """
+        資産推移と資産内訳（損益）を結合
+
+        Parameters
+        ----------
+        assets : list of dict
+            各assetのidとカラム名を含む辞書のリスト
+        """
         df_all_org = pd.read_csv(self.csv_dir / "all_history.csv", encoding="utf-8", sep=',')
         csv_path = self.csv_dir / "all_history_with_profit_and_loss.csv"
         df_all_with_profit_and_loss = pd.read_csv(csv_path, encoding="utf-8", sep=',') if csv_path.exists() else df_all_org
@@ -151,7 +203,20 @@ class Moneyforward():
         df_merged.to_csv(csv_path, encoding="utf-8")
 
 
-def concat_files(assets):
+def concat_files(assets: list) -> Path:
+    """
+    複数アカウントから取得された資産推移と資産内訳（損益）を結合する
+
+    Parameters
+    ----------
+    assets : list of dict
+        各assetのidを含む辞書のリスト
+
+    Returns
+    -------
+    output_path : Path
+        各アカウント、各月、各assetの資産内訳（損益）を結合したcsvのパス
+    """
     concat_csv_dir = root_csv_dir / "concat"
     concat_csv_dir.mkdir(exist_ok=True, parents=True)
     ## asset files
@@ -174,7 +239,7 @@ def concat_files(assets):
     return output_path
 
 
-def main():
+def main() -> None:
     config_ini = configparser.ConfigParser()
     config_ini.read('config.ini', encoding='utf-8')
     emails = json.loads(config_ini.get("MONEYFORWARD","Email"))
@@ -187,7 +252,8 @@ def main():
         try:
             mf.login()
             mf.download_history()
-            mf.get_valuation_profit_and_loss_multiple(asset_id_list=[asset['id'] for asset in assets])
+            for asset_id in [asset['id'] for asset in assets]:
+                mf.get_valuation_profit_and_loss(asset_id)
             mf.calc_profit_and_loss(assets)
         finally:
             mf.close()
