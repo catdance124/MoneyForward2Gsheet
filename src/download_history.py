@@ -31,6 +31,8 @@ class Moneyforward():
         self.csv_dir.mkdir(exist_ok=True, parents=True)
         self.portfolio_dir = self.csv_dir / 'portfolio'
         self.portfolio_dir.mkdir(exist_ok=True)
+        self.history_dir = self.csv_dir / 'history'
+        self.history_dir.mkdir(exist_ok=True)
         self.download_dir = Path("../download")
         self.download_dir.mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
@@ -86,7 +88,7 @@ class Moneyforward():
             href = elem.get_attribute("href")
             if "monthly" in href:
                 month = re.search(r'\d{4}-\d{2}-\d{2}', href).group()
-                save_path = self.csv_dir / f"{month}.csv"
+                save_path = self.history_dir / f"{month}.csv"
                 if not save_path.exists():
                     month_csv = f"https://moneyforward.com/bs/history/list/{month}/monthly/csv"
                     self.driver.get(month_csv)
@@ -94,7 +96,7 @@ class Moneyforward():
                     logger.info(f"Downloaded {save_path}")
         # download this month csv
         this_month_csv = "https://moneyforward.com/bs/history/csv"
-        save_path = self.csv_dir / "this_month.csv"
+        save_path = self.history_dir / "this_month.csv"
         if save_path.exists():
             save_path.unlink()
         self.driver.get(this_month_csv)
@@ -115,7 +117,7 @@ class Moneyforward():
         latest_csv.unlink()
     
     def _concat_csv(self):
-        csv_list = sorted(self.csv_dir.glob('*[!all].csv'))
+        csv_list = sorted(self.history_dir.glob('*.csv'))
         df_list = []
         for csv_path in csv_list:
             df = pd.read_csv(csv_path, encoding="utf-8", sep=',')
@@ -126,10 +128,10 @@ class Moneyforward():
         df_concat.sort_index(inplace=True, ascending=False)
         df_concat.fillna(0, inplace=True)
         df_concat = df_concat.add_prefix(':')
-        df_concat.to_csv(self.csv_dir / 'all.csv', encoding="utf-8")
+        df_concat.to_csv(self.csv_dir / 'all_history.csv', encoding="utf-8")
 
     def calc_profit_and_loss(self, assets):
-        df_all_org = pd.read_csv(self.csv_dir / "all.csv", encoding="utf-8", sep=',')
+        df_all_org = pd.read_csv(self.csv_dir / "all_history.csv", encoding="utf-8", sep=',')
         csv_path = self.portfolio_dir / "portfolio_all.csv"
         if csv_path.exists():
             df_merged = pd.read_csv(csv_path, encoding="utf-8", sep=',')
