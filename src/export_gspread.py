@@ -45,7 +45,7 @@ def main():
         logger.info(f"{asset['sheet_name']}: {csv_path}")
     
     ## history
-    csv_path = root_csv_dir / "portfolio_all.csv"
+    csv_path = root_csv_dir / "all_history_with_profit_and_loss.csv"
     sheet_name = config_ini.get('SPREAD_SHEET', 'Worksheet_name')
     update_sheet(workbook, sheet_name, csv_path)
     logger.info(f"{sheet_name}: {csv_path}")
