@@ -95,14 +95,14 @@ class Moneyforward():
                     self._rename_latest_file(save_path)
                     logger.info(f"Downloaded {save_path}")
         # download this month csv
-        this_month_csv = "https://moneyforward.com/bs/history/csv"
         save_path = self.history_dir / "this_month.csv"
         if save_path.exists():
             save_path.unlink()
+        this_month_csv = "https://moneyforward.com/bs/history/csv"
         self.driver.get(this_month_csv)
         self._rename_latest_file(save_path)
         logger.info(f"Downloaded {save_path}")
-        # create concatenated csv -> all.csv
+        # create concatenated csv
         self._concat_csv()
 
     def _rename_latest_file(self, new_path):
@@ -132,20 +132,16 @@ class Moneyforward():
 
     def calc_profit_and_loss(self, assets):
         df_all_org = pd.read_csv(self.csv_dir / "all_history.csv", encoding="utf-8", sep=',')
-        csv_path = self.portfolio_dir / "portfolio_all.csv"
-        if csv_path.exists():
-            df_merged = pd.read_csv(csv_path, encoding="utf-8", sep=',')
-        else:
-            df_merged = df_all_org
-        df_merged = pd.merge(df_all_org, df_merged, how='left')
+        csv_path = self.csv_dir / "all_history_with_profit_and_loss.csv"
+        df_all_with_profit_and_loss = pd.read_csv(csv_path, encoding="utf-8", sep=',') if csv_path.exists() else df_all_org
+        df_merged = pd.merge(df_all_org, df_all_with_profit_and_loss, how='left')
         df_merged.drop_duplicates(subset='日付', inplace=True)
         df_merged.set_index('日付', inplace=True)
         portfolio_sets = [[asset['column_name'], self.portfolio_dir / f"{asset['id']}.csv"] for asset in assets if asset['column_name'] != '']
-        for portfolio_set in portfolio_sets:
-            column_name, portfolio_csv_path = portfolio_set
-            if not portfolio_csv_path.exists():
+        for column_name, asset_csv_path in portfolio_sets:
+            if not asset_csv_path.exists():
                 continue
-            df_tmp = pd.read_csv(portfolio_csv_path, encoding="utf-8", sep=',')
+            df_tmp = pd.read_csv(asset_csv_path, encoding="utf-8", sep=',')
             df_tmp = df_tmp.dropna(subset=['評価損益'])
             df_tmp['評価損益'] = df_tmp['評価損益'].apply(lambda x: x.strip('円') if '円' in x else x).str.replace(',','').astype(np.int)
             profit_and_loss = df_tmp['評価損益'].sum()
@@ -167,9 +163,9 @@ def concat_files(assets):
         df_concat = pd.concat(df_list)
         df_concat.to_csv(concat_csv_dir / f"{asset['id']}.csv", encoding="utf-8", index=False)
     ## history files
-    output_path = concat_csv_dir / "portfolio_all.csv"
+    output_path = concat_csv_dir / "all_history_with_profit_and_loss.csv"
     df_concat = None
-    for portfolio_all_csv_path in root_csv_dir.glob(f"*/portfolio/portfolio_all.csv"):
+    for portfolio_all_csv_path in root_csv_dir.glob(f"*/all_history_with_profit_and_loss.csv"):
         df = pd.read_csv(portfolio_all_csv_path, encoding="utf-8", sep=',')
         df.set_index('日付', inplace=True)
         df_concat = df_concat.add(df, fill_value=0) if df_concat is not None else df
@@ -201,7 +197,7 @@ def main():
     new_portfolio_all = pd.read_csv(new_portfolio_all_csv_path, encoding="utf-8", sep=',')
 
     # generate result csv
-    portfolio_all_csv_path = root_csv_dir / "portfolio_all.csv"
+    portfolio_all_csv_path = root_csv_dir / "all_history_with_profit_and_loss.csv"
     if portfolio_all_csv_path.exists():
         portfolio_all = pd.read_csv(portfolio_all_csv_path, encoding="utf-8", sep=',')
     else:
