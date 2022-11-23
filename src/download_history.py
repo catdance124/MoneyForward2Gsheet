@@ -165,8 +165,8 @@ def concat_files(assets):
     ## history files
     output_path = concat_csv_dir / "all_history_with_profit_and_loss.csv"
     df_concat = None
-    for portfolio_all_csv_path in root_csv_dir.glob(f"*/all_history_with_profit_and_loss.csv"):
-        df = pd.read_csv(portfolio_all_csv_path, encoding="utf-8", sep=',')
+    for csv_path in root_csv_dir.glob(f"*/all_history_with_profit_and_loss.csv"):
+        df = pd.read_csv(csv_path, encoding="utf-8", sep=',')
         df.set_index('日付', inplace=True)
         df_concat = df_concat.add(df, fill_value=0) if df_concat is not None else df
     df_concat.sort_index(inplace=True, ascending=False)
@@ -193,21 +193,18 @@ def main():
             mf.close()
     
     # concat each files
-    new_portfolio_all_csv_path = concat_files(assets)
-    new_portfolio_all = pd.read_csv(new_portfolio_all_csv_path, encoding="utf-8", sep=',')
+    new_all_history_wpl_csv_path = concat_files(assets)
+    new_all_history_wpl = pd.read_csv(new_all_history_wpl_csv_path, encoding="utf-8", sep=',')
 
     # generate result csv
-    portfolio_all_csv_path = root_csv_dir / "all_history_with_profit_and_loss.csv"
-    if portfolio_all_csv_path.exists():
-        portfolio_all = pd.read_csv(portfolio_all_csv_path, encoding="utf-8", sep=',')
-    else:
-        portfolio_all = new_portfolio_all
-    portfolio_all = pd.merge(new_portfolio_all, portfolio_all, how='outer')
-    portfolio_all.drop_duplicates(subset='日付', inplace=True)
-    portfolio_all.set_index('日付', inplace=True)
-    portfolio_all.sort_index(inplace=True, axis='columns')
-    portfolio_all.sort_index(inplace=True, ascending=False)
-    portfolio_all.to_csv(portfolio_all_csv_path, encoding="utf-8")
+    all_history_wpl_csv_path = root_csv_dir / "all_history_with_profit_and_loss.csv"
+    current_all_history_wpl = pd.read_csv(all_history_wpl_csv_path, encoding="utf-8", sep=',') if all_history_wpl_csv_path.exists() else new_all_history_wpl
+    df_merged = pd.merge(new_all_history_wpl, current_all_history_wpl, how='outer')
+    df_merged.drop_duplicates(subset='日付', inplace=True)
+    df_merged.set_index('日付', inplace=True)
+    df_merged.sort_index(inplace=True, axis='columns')
+    df_merged.sort_index(inplace=True, ascending=False)
+    df_merged.to_csv(all_history_wpl_csv_path, encoding="utf-8")
 
 
 if __name__ == "__main__":
