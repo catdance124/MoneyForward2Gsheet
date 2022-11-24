@@ -230,7 +230,7 @@ def concat_files(assets: list) -> Path:
     ## history files
     output_path = concat_csv_dir / "all_history_with_profit_and_loss.csv"
     df_concat = None
-    for csv_path in root_csv_dir.glob(f"*/all_history_with_profit_and_loss.csv"):
+    for csv_path in root_csv_dir.glob(f"*[!concat]/all_history_with_profit_and_loss.csv"):
         df = pd.read_csv(csv_path, encoding="utf-8", sep=',')
         df.set_index('日付', inplace=True)
         df_concat = df_concat.add(df, fill_value=0) if df_concat is not None else df
