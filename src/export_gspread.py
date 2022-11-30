@@ -1,4 +1,3 @@
-from typing import Any
 import configparser
 import csv
 from pathlib import Path
@@ -8,10 +7,15 @@ from my_logging import get_my_logger
 logger = get_my_logger(__name__)
 
 
-root_csv_dir = Path('../csv')
-concat_csv_dir = root_csv_dir / 'concat'
+# GLOBALS
+# dir names
+ROOT_CSV_DIR = Path("../csv")
+CONCAT_CSV_DIR = ROOT_CSV_DIR / "concat"
+# csv names
+ALL_HISTORY_WPL_CSV = 'all_history_with_profit_and_loss.csv'
 
-def connect_gspread(json_path: str, spreadsheet_key: str) -> Any:
+
+def connect_gspread(json_path: str, spreadsheet_key: str) -> gspread.Spreadsheet:
     """
     スプレッドシートに接続する
 
@@ -24,7 +28,7 @@ def connect_gspread(json_path: str, spreadsheet_key: str) -> Any:
 
     Returns
     -------
-    workbook : Spreadsheet
+    workbook : gspread.Spreadsheet
         スプレッドシートオブジェクト
     """
     scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
@@ -33,7 +37,7 @@ def connect_gspread(json_path: str, spreadsheet_key: str) -> Any:
     workbook = gc.open_by_key(spreadsheet_key)
     return workbook
 
-def update_sheet(workbook: Any, worksheet_name: str, csv_path: Path) -> None:
+def update_sheet(workbook: gspread.Spreadsheet, worksheet_name: str, csv_path: Path) -> None:
     """
     スプレッドシートにcsvの内容を反映する
 
@@ -66,14 +70,14 @@ def main() -> None:
     ## asset
     assets = [dict(config_ini.items(section)) for section in config_ini.sections() if "asset_" in section]
     for asset in assets:
-        csv_path = concat_csv_dir / f"{asset['id']}.csv"
+        csv_path = CONCAT_CSV_DIR / f"{asset['id']}.csv"
         if not csv_path.exists():
             continue
         update_sheet(workbook, asset['sheet_name'], csv_path)
         logger.info(f"{asset['sheet_name']}: {csv_path}")
     
     ## history
-    csv_path = root_csv_dir / "all_history_with_profit_and_loss.csv"
+    csv_path = ROOT_CSV_DIR / ALL_HISTORY_WPL_CSV
     sheet_name = config_ini.get('SPREAD_SHEET', 'Worksheet_name')
     update_sheet(workbook, sheet_name, csv_path)
     logger.info(f"{sheet_name}: {csv_path}")

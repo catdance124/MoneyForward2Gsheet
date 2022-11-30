@@ -12,7 +12,18 @@ import numpy as np
 from my_logging import get_my_logger
 logger = get_my_logger(__name__)
 
-root_csv_dir = Path("../csv")
+
+# GLOBALS
+# dir names
+ROOT_CSV_DIR = Path("../csv")
+CONCAT_CSV_DIR = ROOT_CSV_DIR / "concat"
+CONCAT_CSV_DIR.mkdir(exist_ok=True, parents=True)
+# csv names
+ALL_HISTORY_CSV = 'all_history.csv'
+ALL_HISTORY_WPL_CSV = 'all_history_with_profit_and_loss.csv'
+# df column names
+DF_INDEX_NAME = '日付'
+
 
 class Moneyforward():
     """
@@ -46,7 +57,7 @@ class Moneyforward():
         """
         self.email = email
         self.password = password
-        self.csv_dir = root_csv_dir / email
+        self.csv_dir = ROOT_CSV_DIR / email
         self.csv_dir.mkdir(exist_ok=True, parents=True)
         self.portfolio_dir = self.csv_dir / 'portfolio'
         self.portfolio_dir.mkdir(exist_ok=True)
@@ -167,12 +178,12 @@ class Moneyforward():
             df = pd.read_csv(csv_path, encoding="utf-8", sep=',')
             df_list.append(df)
         df_concat = pd.concat(df_list)
-        df_concat.drop_duplicates(subset='日付', inplace=True)
-        df_concat.set_index('日付', inplace=True)
+        df_concat.drop_duplicates(subset=DF_INDEX_NAME, inplace=True)
+        df_concat.set_index(DF_INDEX_NAME, inplace=True)
         df_concat.sort_index(inplace=True, ascending=False)
         df_concat.fillna(0, inplace=True)
         df_concat = df_concat.add_prefix(':')
-        df_concat.to_csv(self.csv_dir / 'all_history.csv', encoding="utf-8")
+        df_concat.to_csv(self.csv_dir / ALL_HISTORY_CSV, encoding="utf-8")
 
     def calc_profit_and_loss(self, assets: list) -> None:
         """
@@ -183,27 +194,28 @@ class Moneyforward():
         assets : list of dict
             各assetのidとカラム名を含む辞書のリスト
         """
-        df_all_org = pd.read_csv(self.csv_dir / "all_history.csv", encoding="utf-8", sep=',')
-        csv_path = self.csv_dir / "all_history_with_profit_and_loss.csv"
+        df_all_org = pd.read_csv(self.csv_dir / ALL_HISTORY_CSV, encoding="utf-8", sep=',')
+        csv_path = self.csv_dir / ALL_HISTORY_WPL_CSV
         df_all_with_profit_and_loss = pd.read_csv(csv_path, encoding="utf-8", sep=',') if csv_path.exists() else df_all_org
         df_merged = pd.merge(df_all_org, df_all_with_profit_and_loss, how='left')
-        df_merged.drop_duplicates(subset='日付', inplace=True)
-        df_merged.set_index('日付', inplace=True)
+        df_merged.drop_duplicates(subset=DF_INDEX_NAME, inplace=True)
+        df_merged.set_index(DF_INDEX_NAME, inplace=True)
         portfolio_sets = [[asset['column_name'], self.portfolio_dir / f"{asset['id']}.csv"] for asset in assets if asset['column_name'] != '']
         for column_name, asset_csv_path in portfolio_sets:
             if not asset_csv_path.exists():
                 continue
+            target_column_name = '評価損益'
             df_tmp = pd.read_csv(asset_csv_path, encoding="utf-8", sep=',')
-            df_tmp = df_tmp.dropna(subset=['評価損益'])
-            df_tmp['評価損益'] = df_tmp['評価損益'].apply(lambda x: x.strip('円') if '円' in x else x).str.replace(',','').astype(np.int)
-            profit_and_loss = df_tmp['評価損益'].sum()
+            df_tmp = df_tmp.dropna(subset=[target_column_name])
+            df_tmp[target_column_name] = df_tmp[target_column_name].apply(lambda x: x.strip('円') if '円' in x else x).str.replace(',','').astype(np.int)
+            profit_and_loss = df_tmp[target_column_name].sum()
             if not column_name in df_merged.columns:
                 df_merged[column_name] = 0
             df_merged.at[df_merged.index[0], column_name] = profit_and_loss
         df_merged.to_csv(csv_path, encoding="utf-8")
 
 
-def concat_files(assets: list) -> Path:
+def concat_each_account_files(assets: list) -> pd.DataFrame:
     """
     複数アカウントから取得された資産推移と資産内訳（損益）を結合する
 
@@ -214,29 +226,26 @@ def concat_files(assets: list) -> Path:
 
     Returns
     -------
-    output_path : Path
-        各アカウント、各月、各assetの資産内訳（損益）を結合したcsvのパス
+    df_concat : pd.DataFrame
+        各アカウント、各月、各assetの資産内訳（損益）を結合したDataFrame
     """
-    concat_csv_dir = root_csv_dir / "concat"
-    concat_csv_dir.mkdir(exist_ok=True, parents=True)
     ## asset files
     for asset in assets:
         df_list = []
-        for asset_csv_path in root_csv_dir.glob(f"*/portfolio/{asset['id']}.csv"):
+        for asset_csv_path in ROOT_CSV_DIR.glob(f"*/portfolio/{asset['id']}.csv"):
             df = pd.read_csv(asset_csv_path, encoding="utf-8", sep=',')
             df_list.append(df)
         df_concat = pd.concat(df_list)
-        df_concat.to_csv(concat_csv_dir / f"{asset['id']}.csv", encoding="utf-8", index=False)
+        df_concat.to_csv(CONCAT_CSV_DIR / f"{asset['id']}.csv", encoding="utf-8", index=False)
     ## history files
-    output_path = concat_csv_dir / "all_history_with_profit_and_loss.csv"
     df_concat = None
-    for csv_path in root_csv_dir.glob(f"*[!concat]/all_history_with_profit_and_loss.csv"):
+    for csv_path in ROOT_CSV_DIR.glob(f"*[!concat]/{ALL_HISTORY_WPL_CSV}"):
         df = pd.read_csv(csv_path, encoding="utf-8", sep=',')
-        df.set_index('日付', inplace=True)
+        df.set_index(DF_INDEX_NAME, inplace=True)
         df_concat = df_concat.add(df, fill_value=0) if df_concat is not None else df
     df_concat.sort_index(inplace=True, ascending=False)
-    df_concat.to_csv(output_path, encoding="utf-8")
-    return output_path
+    df_concat.to_csv(CONCAT_CSV_DIR / ALL_HISTORY_WPL_CSV, encoding="utf-8")
+    return df_concat
 
 
 def main() -> None:
@@ -259,15 +268,14 @@ def main() -> None:
             mf.close()
     
     # concat each files
-    new_all_history_wpl_csv_path = concat_files(assets)
-    new_all_history_wpl = pd.read_csv(new_all_history_wpl_csv_path, encoding="utf-8", sep=',')
+    new_all_history_wpl = concat_each_account_files(assets)
 
     # generate result csv
-    all_history_wpl_csv_path = root_csv_dir / "all_history_with_profit_and_loss.csv"
-    current_all_history_wpl = pd.read_csv(all_history_wpl_csv_path, encoding="utf-8", sep=',') if all_history_wpl_csv_path.exists() else new_all_history_wpl
-    df_merged = pd.merge(new_all_history_wpl, current_all_history_wpl, how='outer')
-    df_merged.drop_duplicates(subset='日付', inplace=True)
-    df_merged.set_index('日付', inplace=True)
+    all_history_wpl_csv_path = ROOT_CSV_DIR / ALL_HISTORY_WPL_CSV
+    old_all_history_wpl = pd.read_csv(all_history_wpl_csv_path, encoding="utf-8", sep=',') if all_history_wpl_csv_path.exists() else new_all_history_wpl
+    df_merged = pd.merge(new_all_history_wpl, old_all_history_wpl, how='outer')
+    df_merged.drop_duplicates(subset=DF_INDEX_NAME, inplace=True)
+    df_merged.set_index(DF_INDEX_NAME, inplace=True)
     df_merged.sort_index(inplace=True, axis='columns')
     df_merged.sort_index(inplace=True, ascending=False)
     df_merged.to_csv(all_history_wpl_csv_path, encoding="utf-8")
