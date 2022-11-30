@@ -7,17 +7,49 @@ from my_logging import get_my_logger
 logger = get_my_logger(__name__)
 
 
-root_csv_dir = Path('../csv')
-portfolio_csv_dir = root_csv_dir / 'portfolio'
+# GLOBALS
+# dir names
+ROOT_CSV_DIR = Path('../csv')
+CONCAT_CSV_DIR = ROOT_CSV_DIR / 'concat'
+# csv names
+ALL_HISTORY_WPL_CSV = 'all_history_with_profit_and_loss.csv'
 
-def connect_gspread(json_path, spreadsheet_key):
+
+def connect_gspread(json_path: str, spreadsheet_key: str) -> gspread.Spreadsheet:
+    """
+    スプレッドシートに接続する
+
+    Parameters
+    ----------
+    json_path: str
+        Credentialsを作成するためのjsonのパス
+    spreadsheet_key: str
+        ブラウザの URL に表示されるスプレッドシートのキー
+
+    Returns
+    -------
+    workbook : gspread.Spreadsheet
+        スプレッドシートオブジェクト
+    """
     scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
     credentials = ServiceAccountCredentials.from_json_keyfile_name(json_path, scope)
     gc = gspread.authorize(credentials)
     workbook = gc.open_by_key(spreadsheet_key)
     return workbook
 
-def update_sheet(workbook, worksheet_name, csv_path):
+def update_sheet(workbook: gspread.Spreadsheet, worksheet_name: str, csv_path: Path) -> None:
+    """
+    スプレッドシートにcsvの内容を反映する
+
+    Parameters
+    ----------
+    workbook: Spreadsheet
+        スプレッドシートオブジェクト
+    worksheet_name: str
+        対象のワークシート名
+    csv_path: Path
+        対象のcsvのパス
+    """
     if not worksheet_name in [worksheet.title for worksheet in workbook.worksheets()]:
         workbook.add_worksheet(title=worksheet_name, rows=50, cols=50)
     ws = workbook.worksheet(worksheet_name)
@@ -29,19 +61,27 @@ def update_sheet(workbook, worksheet_name, csv_path):
     )
     
 
-def main():
+def main() -> None:
     config_ini = configparser.ConfigParser()
     config_ini.read('config.ini', encoding='utf-8')
     spreadsheet_key = config_ini.get('SPREAD_SHEET', 'Key')
-    assets = [dict(config_ini.items(section)) for section in config_ini.sections() if "asset_" in section]
-    
-    assets.append({'id': 'portfolio_all', 'sheet_name': config_ini.get('SPREAD_SHEET', 'Worksheet_name')})
-    workbook = connect_gspread(json_path="client_secret.json", spreadsheet_key=spreadsheet_key)
+    workbook = connect_gspread(json_path='client_secret.json', spreadsheet_key=spreadsheet_key)
+
+    ## asset
+    assets = [dict(config_ini.items(section)) for section in config_ini.sections() if 'asset_' in section]
     for asset in assets:
-        csv_path = portfolio_csv_dir / f"{asset['id']}.csv"
+        csv_path = CONCAT_CSV_DIR / f"{asset['id']}.csv"
+        if not csv_path.exists():
+            continue
         update_sheet(workbook, asset['sheet_name'], csv_path)
         logger.info(f"{asset['sheet_name']}: {csv_path}")
+    
+    ## history
+    csv_path = ROOT_CSV_DIR / ALL_HISTORY_WPL_CSV
+    sheet_name = config_ini.get('SPREAD_SHEET', 'Worksheet_name')
+    update_sheet(workbook, sheet_name, csv_path)
+    logger.info(f"{sheet_name}: {csv_path}")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
