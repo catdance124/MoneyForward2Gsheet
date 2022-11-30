@@ -9,8 +9,8 @@ logger = get_my_logger(__name__)
 
 # GLOBALS
 # dir names
-ROOT_CSV_DIR = Path("../csv")
-CONCAT_CSV_DIR = ROOT_CSV_DIR / "concat"
+ROOT_CSV_DIR = Path('../csv')
+CONCAT_CSV_DIR = ROOT_CSV_DIR / 'concat'
 # csv names
 ALL_HISTORY_WPL_CSV = 'all_history_with_profit_and_loss.csv'
 
@@ -65,10 +65,10 @@ def main() -> None:
     config_ini = configparser.ConfigParser()
     config_ini.read('config.ini', encoding='utf-8')
     spreadsheet_key = config_ini.get('SPREAD_SHEET', 'Key')
-    workbook = connect_gspread(json_path="client_secret.json", spreadsheet_key=spreadsheet_key)
+    workbook = connect_gspread(json_path='client_secret.json', spreadsheet_key=spreadsheet_key)
 
     ## asset
-    assets = [dict(config_ini.items(section)) for section in config_ini.sections() if "asset_" in section]
+    assets = [dict(config_ini.items(section)) for section in config_ini.sections() if 'asset_' in section]
     for asset in assets:
         csv_path = CONCAT_CSV_DIR / f"{asset['id']}.csv"
         if not csv_path.exists():
@@ -83,5 +83,5 @@ def main() -> None:
     logger.info(f"{sheet_name}: {csv_path}")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
