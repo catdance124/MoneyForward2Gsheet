@@ -127,24 +127,37 @@ class Moneyforward():
         # download previous month csv
         for elem in elems:
             href = elem.get_attribute("href")
-            if "monthly" in href:
-                month = re.search(r'\d{4}-\d{2}-\d{2}', href).group()
-                save_path = self.history_dir / f"{month}.csv"
-                if not save_path.exists():
-                    month_csv = f"https://moneyforward.com/bs/history/list/{month}/monthly/csv"
-                    self.driver.get(month_csv)
-                    self._rename_latest_file(save_path)
-                    logger.info(f"Downloaded {save_path}")
+            if not "monthly" in href:
+                continue
+            month = re.search(r'\d{4}-\d{2}-\d{2}', href).group()
+            save_path = self.history_dir / f"{month}.csv"
+            if save_path.exists():
+                continue
+            month_csv = f"https://moneyforward.com/bs/history/list/{month}/monthly/csv"
+            self._download_file(month_csv, save_path)
         # download this month csv
         save_path = self.history_dir / "this_month.csv"
         if save_path.exists():
             save_path.unlink()
         this_month_csv = "https://moneyforward.com/bs/history/csv"
-        self.driver.get(this_month_csv)
-        self._rename_latest_file(save_path)
-        logger.info(f"Downloaded {save_path}")
+        self._download_file(this_month_csv, save_path)
         # create concatenated csv
         self._concat_csv()
+
+    def _download_file(self, url: str, save_path: Path) -> None:
+        """
+        指定URLのファイルをダウンロードする
+
+        Parameters
+        ----------
+        url: str
+            保存したいファイルのURL
+        save_path : Path
+            保存先のパス
+        """
+        self.driver.get(url)
+        self._rename_latest_file(save_path)
+        logger.info(f"Downloaded {save_path}")
 
     def _rename_latest_file(self, new_path: Path) -> None:
         """
