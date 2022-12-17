@@ -138,6 +138,22 @@ class Moneyforward():
         self._download_file(this_month_csv, save_path)
         # create concatenated csv
         self._concat_csv()
+    
+    def reload_accounts(self) -> None:
+        """
+        登録されている金融機関の情報を更新する
+        """
+        accounts_url = 'https://moneyforward.com/accounts'
+        self.driver.get(accounts_url)
+        elems = self.driver.find_elements(By.XPATH, '//input[@data-disable-with="更新"]')
+        for elem in elems:
+            elem.click()
+        time.sleep(45)
+        trs = self.driver.find_elements(By.XPATH, '//tr[@id]')
+        for tr in trs:
+            acount_name = tr.find_element(By.XPATH, 'td[@class="service"]/a[starts-with(@href, "/accounts")]').text
+            last_obtained_time = tr.find_element(By.XPATH, 'td[@class="created"]/p[last()]').text
+            logger.info(f"Last obtained date: {last_obtained_time} | {acount_name}")
 
     def _download_file(self, url: str, save_path: Path) -> None:
         """
@@ -283,6 +299,7 @@ def main() -> None:
         mf = Moneyforward(email=email, password=password)
         try:
             mf.login()
+            mf.reload_accounts()
             mf.download_history()
             for asset_id in [asset['id'] for asset in assets]:
                 mf.get_valuation_profit_and_loss(asset_id)
