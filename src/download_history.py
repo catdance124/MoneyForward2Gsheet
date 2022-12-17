@@ -15,9 +15,8 @@ logger = get_my_logger(__name__)
 
 # GLOBALS
 # dir names
-ROOT_CSV_DIR = Path('../csv')
-CONCAT_CSV_DIR = ROOT_CSV_DIR / 'concat'
-CONCAT_CSV_DIR.mkdir(exist_ok=True, parents=True)
+ROOT_CSV_DIR = Path('../csv');              ROOT_CSV_DIR  .mkdir(exist_ok=True)
+CONCAT_CSV_DIR = ROOT_CSV_DIR / 'concat';   CONCAT_CSV_DIR.mkdir(exist_ok=True)
 # csv names
 ALL_HISTORY_CSV = 'all_history.csv'
 ALL_HISTORY_WPL_CSV = 'all_history_with_profit_and_loss.csv'
@@ -55,14 +54,10 @@ class Moneyforward():
         """
         self.email = email
         self.password = password
-        self.csv_dir = ROOT_CSV_DIR / email
-        self.csv_dir.mkdir(exist_ok=True, parents=True)
-        self.portfolio_dir = self.csv_dir / 'portfolio'
-        self.portfolio_dir.mkdir(exist_ok=True)
-        self.history_dir = self.csv_dir / 'history'
-        self.history_dir.mkdir(exist_ok=True)
-        self.download_dir = Path('../download')
-        self.download_dir.mkdir(exist_ok=True)
+        self.csv_dir = ROOT_CSV_DIR / email;                self.csv_dir      .mkdir(exist_ok=True)
+        self.portfolio_dir = self.csv_dir / 'portfolio';    self.portfolio_dir.mkdir(exist_ok=True)
+        self.history_dir = self.csv_dir / 'history';        self.history_dir  .mkdir(exist_ok=True)
+        self.download_dir = Path('../download');            self.download_dir .mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
         options.add_experimental_option('prefs', {'download.default_directory': str(self.download_dir.resolve())})
         options.add_argument('--no-sandbox')
@@ -83,15 +78,15 @@ class Moneyforward():
         login_url = 'https://moneyforward.com/sign_in'
         self.driver.get(login_url)
         self.driver.find_element(By.LINK_TEXT, 'メールアドレスでログイン').click()
-        elem = self.driver.find_element(By.NAME, 'mfid_user[email]')
-        elem.clear()
-        elem.send_keys(self.email)
-        elem.submit()
+        email_input = self.driver.find_element(By.NAME, 'mfid_user[email]')
+        email_input.clear()
+        email_input.send_keys(self.email)
+        email_input.submit()
         time.sleep(3)
-        elem = self.driver.find_element(By.NAME, 'mfid_user[password]')
-        elem.clear()
-        elem.send_keys(self.password)
-        elem.submit()
+        password_input = self.driver.find_element(By.NAME, 'mfid_user[password]')
+        password_input.clear()
+        password_input.send_keys(self.password)
+        password_input.submit()
 
     def get_valuation_profit_and_loss(self, asset_id: str) -> None:
         """
@@ -104,13 +99,13 @@ class Moneyforward():
         """
         portfolio_url = 'https://moneyforward.com/bs/portfolio'
         self.driver.get(portfolio_url)
-        elems = self.driver.find_elements(By.XPATH, f'//*[@id="{asset_id}"]//table')
-        if len(elems) == 0:
+        tables = self.driver.find_elements(By.XPATH, f'//*[@id="{asset_id}"]//table')
+        if len(tables) == 0:
             logger.debug(f"no portfolio elements: {asset_id}")
             return
-        elem = elems[0]
-        ths = [th.text for th in elem.find_elements(By.XPATH, 'thead//th')]
-        trs = elem.find_elements(By.XPATH, 'tbody/tr')
+        table = tables[0]
+        ths = [th.text for th in table.find_elements(By.XPATH, 'thead//th')]
+        trs = table.find_elements(By.XPATH, 'tbody/tr')
         tds = [[td.text for td in tr.find_elements(By.XPATH, 'td')] for tr in trs]
         df = pd.DataFrame(tds, columns=ths)
         save_path = self.portfolio_dir / f'{asset_id}.csv'
@@ -123,10 +118,10 @@ class Moneyforward():
         """
         history_url = 'https://moneyforward.com/bs/history'
         self.driver.get(history_url)
-        elems = self.driver.find_elements(By.XPATH, '//*[@id="bs-history"]/*/table/tbody/tr/td/a')
+        anchors = self.driver.find_elements(By.XPATH, '//*[@id="bs-history"]/*/table/tbody/tr/td/a')
         # download previous month csv
-        for elem in elems:
-            href = elem.get_attribute('href')
+        for anchor in anchors:
+            href = anchor.get_attribute('href')
             if not 'monthly' in href:
                 continue
             month = re.search(r'\d{4}-\d{2}-\d{2}', href).group()
@@ -143,6 +138,22 @@ class Moneyforward():
         self._download_file(this_month_csv, save_path)
         # create concatenated csv
         self._concat_csv()
+    
+    def reload_accounts(self) -> None:
+        """
+        登録されている金融機関の情報を更新する
+        """
+        accounts_url = 'https://moneyforward.com/accounts'
+        self.driver.get(accounts_url)
+        reload_btns = self.driver.find_elements(By.XPATH, '//input[@data-disable-with="更新"]')
+        for reload_btn in reload_btns:
+            reload_btn.click()
+        time.sleep(45)
+        trs = self.driver.find_elements(By.XPATH, '//tr[@id]')
+        for tr in trs:
+            acount_name = tr.find_element(By.XPATH, 'td[@class="service"]/a[starts-with(@href, "/accounts")]').text
+            last_obtained_time = tr.find_element(By.XPATH, 'td[@class="created"]/p[last()]').text
+            logger.info(f"Last obtained date: {last_obtained_time} | {acount_name}")
 
     def _download_file(self, url: str, save_path: Path) -> None:
         """
@@ -222,7 +233,7 @@ class Moneyforward():
         df_merged.to_csv(csv_path, encoding='utf-8')
 
 
-def my_set_index(df: pd.DataFrame) -> None:
+def my_set_index(df: pd.DataFrame) -> pd.DataFrame:
     """
     DataFrameの基本的なインデックス登録処理をまとめたもの
 
@@ -288,6 +299,7 @@ def main() -> None:
         mf = Moneyforward(email=email, password=password)
         try:
             mf.login()
+            mf.reload_accounts()
             mf.download_history()
             for asset_id in [asset['id'] for asset in assets]:
                 mf.get_valuation_profit_and_loss(asset_id)
