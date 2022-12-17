@@ -15,9 +15,8 @@ logger = get_my_logger(__name__)
 
 # GLOBALS
 # dir names
-ROOT_CSV_DIR = Path('../csv')
-CONCAT_CSV_DIR = ROOT_CSV_DIR / 'concat'
-CONCAT_CSV_DIR.mkdir(exist_ok=True, parents=True)
+ROOT_CSV_DIR = Path('../csv');              ROOT_CSV_DIR  .mkdir(exist_ok=True)
+CONCAT_CSV_DIR = ROOT_CSV_DIR / 'concat';   CONCAT_CSV_DIR.mkdir(exist_ok=True)
 # csv names
 ALL_HISTORY_CSV = 'all_history.csv'
 ALL_HISTORY_WPL_CSV = 'all_history_with_profit_and_loss.csv'
@@ -55,14 +54,10 @@ class Moneyforward():
         """
         self.email = email
         self.password = password
-        self.csv_dir = ROOT_CSV_DIR / email
-        self.csv_dir.mkdir(exist_ok=True, parents=True)
-        self.portfolio_dir = self.csv_dir / 'portfolio'
-        self.portfolio_dir.mkdir(exist_ok=True)
-        self.history_dir = self.csv_dir / 'history'
-        self.history_dir.mkdir(exist_ok=True)
-        self.download_dir = Path('../download')
-        self.download_dir.mkdir(exist_ok=True)
+        self.csv_dir = ROOT_CSV_DIR / email;                self.csv_dir      .mkdir(exist_ok=True)
+        self.portfolio_dir = self.csv_dir / 'portfolio';    self.portfolio_dir.mkdir(exist_ok=True)
+        self.history_dir = self.csv_dir / 'history';        self.history_dir  .mkdir(exist_ok=True)
+        self.download_dir = Path('../download');            self.download_dir .mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
         options.add_experimental_option('prefs', {'download.default_directory': str(self.download_dir.resolve())})
         options.add_argument('--no-sandbox')
