@@ -139,16 +139,21 @@ class Moneyforward():
         # create concatenated csv
         self._concat_csv()
     
-    def reload_accounts(self) -> None:
+    def reload_accounts(self, reload_wait_time: int = 60) -> None:
         """
         登録されている金融機関の情報を更新する
+
+        Parameters
+        ----------
+        reload_wait_time: int
+            更新ボタン押下後に待機する秒数
         """
         accounts_url = 'https://moneyforward.com/accounts'
         self.driver.get(accounts_url)
         reload_btns = self.driver.find_elements(By.XPATH, '//input[@data-disable-with="更新"]')
         for reload_btn in reload_btns:
             reload_btn.click()
-        time.sleep(45)
+        time.sleep(reload_wait_time)
         trs = self.driver.find_elements(By.XPATH, '//tr[@id]')
         for tr in trs:
             acount_name = tr.find_element(By.XPATH, 'td[@class="service"]/a[starts-with(@href, "/accounts")]').text
@@ -293,13 +298,14 @@ def main() -> None:
     emails = json.loads(config_ini.get('MONEYFORWARD','Email'))
     passwords = json.loads(config_ini.get('MONEYFORWARD','Password'))
     assets = [dict(config_ini.items(section)) for section in config_ini.sections() if 'asset_' in section]
+    reload_wait_time = int(config_ini.get('MONEYFORWARD','Reload_wait_time'))
     
     # download each files
     for email, password in zip(emails, passwords):
         mf = Moneyforward(email=email, password=password)
         try:
             mf.login()
-            mf.reload_accounts()
+            mf.reload_accounts(reload_wait_time)
             mf.download_history()
             for asset_id in [asset['id'] for asset in assets]:
                 mf.get_valuation_profit_and_loss(asset_id)
