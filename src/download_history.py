@@ -108,6 +108,7 @@ class Moneyforward():
         trs = table.find_elements(By.XPATH, 'tbody/tr')
         tds = [[td.text for td in tr.find_elements(By.XPATH, 'td')] for tr in trs]
         df = pd.DataFrame(tds, columns=ths)
+        df = df.replace(',', '', regex=True).replace('円', '', regex=True)
         save_path = self.portfolio_dir / f'{asset_id}.csv'
         df.to_csv(save_path, encoding='utf-8', index=False)
         logger.info(f"Downloaded {save_path}")
@@ -230,7 +231,6 @@ class Moneyforward():
             target_column_name = '評価損益'
             df_tmp = pd.read_csv(asset_csv_path, encoding='utf-8', sep=',')
             df_tmp = df_tmp.dropna(subset=[target_column_name])
-            df_tmp[target_column_name] = df_tmp[target_column_name].apply(lambda x: x.strip('円') if '円' in x else x).str.replace(',','').astype(np.int)
             profit_and_loss = df_tmp[target_column_name].sum()
             if not column_name in df_merged.columns:
                 df_merged[column_name] = 0
