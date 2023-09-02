@@ -77,7 +77,6 @@ class Moneyforward():
         """
         login_url = 'https://moneyforward.com/sign_in'
         self.driver.get(login_url)
-        self.driver.find_element(By.LINK_TEXT, 'メールアドレスでログイン').click()
         email_input = self.driver.find_element(By.NAME, 'mfid_user[email]')
         email_input.clear()
         email_input.send_keys(self.email)
