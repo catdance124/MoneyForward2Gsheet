@@ -87,20 +87,22 @@ class Moneyforward():
         password_input.send_keys(self.password)
         password_input.submit()
 
-    def get_valuation_profit_and_loss(self, asset_id: str) -> None:
+    def refresh_valuation_profit_and_loss(self, asset_id: str) -> None:
         """
-        各assetの資産内訳（損益）を取得する
+        ローカルの各assetの資産内訳（損益）を最新状態にする
 
         Parameters
         ----------
         asset_id : str
             html要素の特定に利用するasset_id
         """
+        save_path = self.portfolio_dir / f'{asset_id}.csv'
         portfolio_url = 'https://moneyforward.com/bs/portfolio'
         self.driver.get(portfolio_url)
         tables = self.driver.find_elements(By.XPATH, f'//*[@id="{asset_id}"]//table')
         if len(tables) == 0:
             logger.debug(f"no portfolio elements: {asset_id}")
+            save_path.unlink(missing_ok=True)
             return
         table = tables[0]
         ths = [th.text for th in table.find_elements(By.XPATH, 'thead//th')]
@@ -108,7 +110,6 @@ class Moneyforward():
         tds = [[td.text for td in tr.find_elements(By.XPATH, 'td')] for tr in trs]
         df = pd.DataFrame(tds, columns=ths)
         df = df.replace(',', '', regex=True).replace('円', '', regex=True)
-        save_path = self.portfolio_dir / f'{asset_id}.csv'
         df.to_csv(save_path, encoding='utf-8', index=False)
         logger.info(f"Downloaded {save_path}")
 
@@ -132,8 +133,7 @@ class Moneyforward():
             self._download_file(month_csv, save_path)
         # download this month csv
         save_path = self.history_dir / 'this_month.csv'
-        if save_path.exists():
-            save_path.unlink()
+        save_path.unlink(missing_ok=True)
         this_month_csv = 'https://moneyforward.com/bs/history/csv'
         self._download_file(this_month_csv, save_path)
         # create concatenated csv
@@ -193,7 +193,7 @@ class Moneyforward():
         download_files = self.download_dir.glob('*')
         latest_csv = max(download_files, key=lambda p: p.stat().st_ctime)
         _convert_shiftJIS_to_utf8(latest_csv, new_path)
-        latest_csv.unlink()
+        latest_csv.unlink(missing_ok=True)
     
     def _concat_csv(self) -> None:
         """
@@ -307,7 +307,7 @@ def main() -> None:
             mf.reload_accounts(reload_wait_time)
             mf.download_history()
             for asset_id in [asset['id'] for asset in assets]:
-                mf.get_valuation_profit_and_loss(asset_id)
+                mf.refresh_valuation_profit_and_loss(asset_id)
             mf.calc_profit_and_loss(assets)
         finally:
             mf.close()
