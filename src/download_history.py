@@ -1,4 +1,5 @@
 import configparser
+import os
 import re
 import time
 import json
@@ -59,10 +60,21 @@ class Moneyforward():
         self.history_dir = self.csv_dir / 'history';        self.history_dir  .mkdir(exist_ok=True)
         self.download_dir = Path('../download');            self.download_dir .mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
-        options.add_experimental_option('prefs', {'download.default_directory': str(self.download_dir.resolve())})
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
-        self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+        options.add_argument('--blink-settings=imagesEnabled=false')
+        # 環境変数にSELENIUM_URLがある場合はwebdriver.Remoteを利用
+        if "SELENIUM_URL" in os.environ:
+            self.driver = webdriver.Remote(
+                command_executor = os.environ["SELENIUM_URL"],
+                options = options
+            )
+        else: 
+            options.add_experimental_option('prefs', {'download.default_directory': str(self.download_dir.resolve())})
+            self.driver = webdriver.Chrome(
+                ChromeDriverManager().install(), 
+                options=options
+            )
     
     def close(self) -> None:
         """

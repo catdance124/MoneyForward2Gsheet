@@ -46,8 +46,14 @@ Place the obtained json file as `src/client_secret.json` .
 $ pwd
 ~/MoneyForward2Gsheet
 $ bash make_env.sh
+
+# option1: docker-selenium & chrome
 $ docker-compose build
 $ docker-compose up -d
+
+# option2:xvfb & chrome
+$ docker-compose -f docker-compose.xvfb.yml build
+$ docker-compose -f docker-compose.xvfb.yml up -d
 ```
 
 ## Appendix

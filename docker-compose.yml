@@ -1,14 +1,33 @@
-version: '2'
 services:
+  selenium:
+    image: selenium/standalone-chrome:latest
+    user: root
+    ports:
+      - 4444:4444
+      - 7900:7900
+    volumes:
+      - /dev/shm:/dev/shm
+      - ./download:/home/seluser/Downloads
   app:
     build:
       context: .
-      args:
-        UID: $UID
-        GID: $GID
-        UNAME: $UNAME
-    user: "${UID}:${GID}"
+      dockerfile: ./Dockerfile
+      target: base
+    user: root
+    environment:
+      SELENIUM_URL: http://selenium:4444/wd/hub
     volumes:
       - ./:/opt/app
     working_dir: /opt/app/src
-    command: bash -c "xvfb-run --auto-servernum --server-args='-screen 0, 1024x768x24' -- python mf2gs.py > /dev/null"
+    depends_on:
+      - selenium
+    entrypoint:
+      [
+        "wait-for-it",
+        "-t",
+        "0",
+        "selenium:4444",
+        "--",
+        "python",
+        "mf2gs.py",
+      ]
