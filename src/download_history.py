@@ -6,7 +6,6 @@ import shutil
 from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
 import numpy as np
 from my_logging import get_my_logger
@@ -59,10 +58,16 @@ class Moneyforward():
         self.history_dir = self.csv_dir / 'history';        self.history_dir  .mkdir(exist_ok=True)
         self.download_dir = Path('../download');            self.download_dir .mkdir(exist_ok=True)
         options = webdriver.ChromeOptions()
-        options.add_experimental_option('prefs', {'download.default_directory': str(self.download_dir.resolve())})
+        options.add_experimental_option('prefs', {
+            'download.default_directory': str(self.download_dir.resolve()), 
+            'intl.accept_languages': 'ja'
+        })
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
-        self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+        options.add_argument('--lang=ja-JP')
+        options.add_experimental_option('prefs', {})
+        options.binary_location = "/usr/bin/chromium"
+        self.driver = webdriver.Chrome(options=options)
     
     def close(self) -> None:
         """
