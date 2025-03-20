@@ -327,10 +327,15 @@ def main() -> None:
     # generate result csv
     all_history_wpl_csv_path = ROOT_CSV_DIR / ALL_HISTORY_WPL_CSV
     old_all_history_wpl = pd.read_csv(all_history_wpl_csv_path, encoding='utf-8', sep=',') if all_history_wpl_csv_path.exists() else new_all_history_wpl
-    df_merged = pd.merge(new_all_history_wpl, old_all_history_wpl, how='outer')
-    df_merged = my_set_index(df_merged)
-    df_merged.sort_index(inplace=True, axis='columns')
-    df_merged.to_csv(all_history_wpl_csv_path, encoding='utf-8')
+    df_merged_newer = my_set_index(pd.merge(new_all_history_wpl, old_all_history_wpl, how='outer')).sort_index(axis='columns')
+    df_merged_older = my_set_index(pd.merge(old_all_history_wpl, new_all_history_wpl, how='outer')).sort_index(axis='columns')
+    # newerの損益値が0の場合はolderの値を採用
+    for asset in assets:
+        column_name = asset['column_name']
+        if column_name == '':
+            continue
+        df_merged_newer[column_name] = np.where(df_merged_newer[column_name] == 0, df_merged_older[column_name], df_merged_newer[column_name])
+    df_merged_newer.to_csv(all_history_wpl_csv_path, encoding='utf-8')
 
 
 if __name__ == '__main__':
