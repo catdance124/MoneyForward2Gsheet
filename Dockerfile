@@ -2,12 +2,13 @@ FROM python:3.8.8-buster
 
 WORKDIR /opt/app
 
-# chrome install
-RUN wget --no-check-certificate https://dl-ssl.google.com/linux/linux_signing_key.pub
-RUN apt-key add linux_signing_key.pub
-RUN sh -c 'echo "deb http://dl.google.com/linux/chrome/deb/ stable main " >> /etc/apt/sources.list'
-RUN apt-get update -y
-RUN apt-get install google-chrome-stable -y
+# chromium install
+RUN apt-get update -y && apt-get install -y \
+    chromium chromium-driver
+ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROME_DRIVER=/usr/bin/chromedriver
+ENV PATH=$PATH:/usr/bin
+
 
 # pip install
 RUN pip install --upgrade pip
