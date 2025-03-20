@@ -1,4 +1,5 @@
 import configparser
+import sys
 import re
 import time
 import json
@@ -65,7 +66,6 @@ class Moneyforward():
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--lang=ja-JP')
-        options.add_experimental_option('prefs', {})
         options.binary_location = "/usr/bin/chromium"
         self.driver = webdriver.Chrome(options=options)
     
@@ -135,12 +135,12 @@ class Moneyforward():
             if save_path.exists():
                 continue
             month_csv = f'https://moneyforward.com/bs/history/list/{month}/monthly/csv'
-            self._download_file(month_csv, save_path)
+            self._download_csv(month_csv, save_path)
         # download this month csv
         save_path = self.history_dir / 'this_month.csv'
         save_path.unlink(missing_ok=True)
         this_month_csv = 'https://moneyforward.com/bs/history/csv'
-        self._download_file(this_month_csv, save_path)
+        self._download_csv(this_month_csv, save_path)
         # create concatenated csv
         self._concat_csv()
     
@@ -165,7 +165,7 @@ class Moneyforward():
             last_obtained_time = tr.find_element(By.XPATH, 'td[@class="created"]/p[last()]').text
             logger.info(f"Last obtained date: {last_obtained_time} | {acount_name}")
 
-    def _download_file(self, url: str, save_path: Path) -> None:
+    def _download_csv(self, url: str, save_path: Path) -> None:
         """
         指定URLのファイルをダウンロードする
 
@@ -177,10 +177,10 @@ class Moneyforward():
             保存先のパス
         """
         self.driver.get(url)
-        self._rename_latest_file(save_path)
+        self._rename_latest_csv(save_path)
         logger.info(f"Downloaded {save_path}")
 
-    def _rename_latest_file(self, new_path: Path) -> None:
+    def _rename_latest_csv(self, new_path: Path) -> None:
         """
         ダウンロードディレクトリの最新ファイルをリネームし再配置する
         同時に文字コード変換も実施する
@@ -314,6 +314,9 @@ def main() -> None:
             for asset_id in [asset['id'] for asset in assets]:
                 mf.refresh_valuation_profit_and_loss(asset_id)
             mf.calc_profit_and_loss(assets)
+        except Exception as e:
+            logger.error(e)
+            sys.exit(1)
         finally:
             mf.close()
     
