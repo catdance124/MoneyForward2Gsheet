@@ -52,7 +52,7 @@ class Moneyforward():
         password : str
             ログイン用パスワード
         """
-        self.BASE_URL = 'https://moneyforward.com'
+        self.BASE_URL = 'https://ssnb.x.moneyforward.com'
         self.email = email
         self.password = password
         self.csv_dir = ROOT_CSV_DIR / email;                self.csv_dir      .mkdir(exist_ok=True)
@@ -81,14 +81,14 @@ class Moneyforward():
         """
         MoneyForwardのログイン処理を実施する
         """
-        login_url = self.BASE_URL + '/sign_in'
+        login_url = self.BASE_URL + '/users/sign_in'
         self.driver.get(login_url)
-        email_input = self.driver.find_element(By.NAME, 'mfid_user[email]')
+        email_input = self.driver.find_element(By.NAME, 'sign_in_session_service[email]')
         email_input.clear()
         email_input.send_keys(self.email)
         email_input.submit()
         time.sleep(3)
-        password_input = self.driver.find_element(By.NAME, 'mfid_user[password]')
+        password_input = self.driver.find_element(By.NAME, 'sign_in_session_service[password]')
         password_input.clear()
         password_input.send_keys(self.password)
         password_input.submit()
@@ -162,8 +162,8 @@ class Moneyforward():
         time.sleep(reload_wait_time)
         trs = self.driver.find_elements(By.XPATH, '//tr[@id]')
         for tr in trs:
-            acount_name = tr.find_element(By.XPATH, 'td[@class="service"]/a[starts-with(@href, "/accounts")]').text
-            last_obtained_time = tr.find_element(By.XPATH, 'td[@class="created"]/p[last()]').text
+            acount_name = tr.find_element(By.XPATH, 'td[1]/a[starts-with(@href, "/accounts")]').text
+            last_obtained_time = tr.find_element(By.XPATH, 'td[3]').text.replace('\n', '')
             logger.info(f"Last obtained date: {last_obtained_time} | {acount_name}")
 
     def _download_csv(self, url: str, save_path: Path) -> None:
