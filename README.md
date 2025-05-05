@@ -1,11 +1,14 @@
 # MoneyForward2Gsheet
-Downloading asset trends📈 from MoneyForward, and exporting them to google spreadsheet, in python.
+Downloading asset trends📈 from `マネーフォワード for 住信SBIネット銀行`, and exporting them to google spreadsheet, in python.
 
 ## env
 - docker
 
 ## setting
-fill in `src/config.ini`
+### create account
+https://ssnb.x.moneyforward.com/
+
+### fill in `src/config.ini`
 ```ini
 # case of single account
 [MONEYFORWARD]

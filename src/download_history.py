@@ -52,6 +52,7 @@ class Moneyforward():
         password : str
             ログイン用パスワード
         """
+        self.BASE_URL = 'https://ssnb.x.moneyforward.com'
         self.email = email
         self.password = password
         self.csv_dir = ROOT_CSV_DIR / email;                self.csv_dir      .mkdir(exist_ok=True)
@@ -80,14 +81,14 @@ class Moneyforward():
         """
         MoneyForwardのログイン処理を実施する
         """
-        login_url = 'https://moneyforward.com/sign_in'
+        login_url = self.BASE_URL + '/users/sign_in'
         self.driver.get(login_url)
-        email_input = self.driver.find_element(By.NAME, 'mfid_user[email]')
+        email_input = self.driver.find_element(By.NAME, 'sign_in_session_service[email]')
         email_input.clear()
         email_input.send_keys(self.email)
         email_input.submit()
         time.sleep(3)
-        password_input = self.driver.find_element(By.NAME, 'mfid_user[password]')
+        password_input = self.driver.find_element(By.NAME, 'sign_in_session_service[password]')
         password_input.clear()
         password_input.send_keys(self.password)
         password_input.submit()
@@ -102,7 +103,7 @@ class Moneyforward():
             html要素の特定に利用するasset_id
         """
         save_path = self.portfolio_dir / f'{asset_id}.csv'
-        portfolio_url = 'https://moneyforward.com/bs/portfolio'
+        portfolio_url = self.BASE_URL + '/bs/portfolio'
         self.driver.get(portfolio_url)
         tables = self.driver.find_elements(By.XPATH, f'//*[@id="{asset_id}"]//table')
         if len(tables) == 0:
@@ -122,7 +123,7 @@ class Moneyforward():
         """
         各月の資産推移を取得する
         """
-        history_url = 'https://moneyforward.com/bs/history'
+        history_url = self.BASE_URL + '/bs/history'
         self.driver.get(history_url)
         anchors = self.driver.find_elements(By.XPATH, '//*[@id="bs-history"]/*/table/tbody/tr/td/a')
         # download previous month csv
@@ -134,12 +135,12 @@ class Moneyforward():
             save_path = self.history_dir / f'{month}.csv'
             if save_path.exists():
                 continue
-            month_csv = f'https://moneyforward.com/bs/history/list/{month}/monthly/csv'
+            month_csv = self.BASE_URL + f'/bs/history/list/{month}/monthly/csv'
             self._download_csv(month_csv, save_path)
         # download this month csv
         save_path = self.history_dir / 'this_month.csv'
         save_path.unlink(missing_ok=True)
-        this_month_csv = 'https://moneyforward.com/bs/history/csv'
+        this_month_csv = self.BASE_URL + '/bs/history/csv'
         self._download_csv(this_month_csv, save_path)
         # create concatenated csv
         self._concat_csv()
@@ -153,7 +154,7 @@ class Moneyforward():
         reload_wait_time: int
             更新ボタン押下後に待機する秒数
         """
-        accounts_url = 'https://moneyforward.com/accounts'
+        accounts_url = self.BASE_URL + '/accounts'
         self.driver.get(accounts_url)
         reload_btns = self.driver.find_elements(By.XPATH, '//input[@data-disable-with="更新"]')
         for reload_btn in reload_btns:
@@ -161,8 +162,8 @@ class Moneyforward():
         time.sleep(reload_wait_time)
         trs = self.driver.find_elements(By.XPATH, '//tr[@id]')
         for tr in trs:
-            acount_name = tr.find_element(By.XPATH, 'td[@class="service"]/a[starts-with(@href, "/accounts")]').text
-            last_obtained_time = tr.find_element(By.XPATH, 'td[@class="created"]/p[last()]').text
+            acount_name = tr.find_element(By.XPATH, 'td[1]/a[starts-with(@href, "/accounts")]').text
+            last_obtained_time = tr.find_element(By.XPATH, 'td[3]').text.replace('\n', '')
             logger.info(f"Last obtained date: {last_obtained_time} | {acount_name}")
 
     def _download_csv(self, url: str, save_path: Path) -> None:
