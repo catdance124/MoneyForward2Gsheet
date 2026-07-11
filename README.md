@@ -9,9 +9,9 @@ Scraping is done by [mf-sbi-client](https://github.com/catdance124/mf-sbi-client
 ## layout
 ```
 MoneyForward2Gsheet/
-├── .env                 # credentials (gitignored, see .env.example)
-├── config.ini           # spreadsheet & asset settings
-├── client_secret.json   # google service account key
+├── .env                 # secrets: credentials & spreadsheet key (gitignored, see .env.example)
+├── config.ini           # non-secret settings (worksheet names, asset mapping)
+├── client_secret.json   # google service account key (gitignored)
 ├── csv/                 # generated csv (gitignored)
 ├── log/                 # log file (gitignored)
 └── src/mf2gs/           # package: config / download / aggregate / export / cli
@@ -22,7 +22,7 @@ MoneyForward2Gsheet/
 https://ssnb.x.moneyforward.com/
 
 ### fill in `.env`
-Copy `.env.example` to `.env` and fill in your credentials (JSON arrays, multi-account supported):
+Copy `.env.example` to `.env` and fill in your secrets (never committed):
 ```sh
 # case of single account
 MF_SBI_EMAILS='["<REGISTERED EMAIL>"]'
@@ -31,12 +31,9 @@ MF_SBI_PASSWORDS='["<REGISTERED PASSWORD>"]'
 # case of multi account
 MF_SBI_EMAILS='["<EMAIL 1>", "<EMAIL 2>", "<EMAIL 3>"]'
 MF_SBI_PASSWORDS='["<PASSWORD 1>", "<PASSWORD 2>", "<PASSWORD 3>"]'
-```
 
-### fill in `config.ini`
-```ini
-[SPREAD_SHEET]
-Key = <SPREADSHEET KEY got from URL>
+# spreadsheet key got from URL
+SPREADSHEET_KEY='<SPREADSHEET KEY>'
 ```
 
 ### google spreadsheet R/W

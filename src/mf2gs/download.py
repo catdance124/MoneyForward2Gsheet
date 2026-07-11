@@ -57,8 +57,10 @@ class Moneyforward(contextlib.AbstractContextManager):
         self.client.refresh_all_accounts(dry_run=False)
         try:
             accounts = self.client.wait_refresh(timeout=reload_wait_time)
-        except RefreshError as e:
-            logger.warning(f"reload timeout: {e}")
+        except RefreshError:
+            # 「更新状態」列は取得完了後もしばらく「更新中」のまま残るため、
+            # タイムアウトは異常ではない。最終取得時刻をログで確認できるので継続する
+            logger.info(f"更新完了を {reload_wait_time} 秒で待ちきれませんでしたが、処理を継続します")
             accounts = self.client.list_accounts()
         for account in accounts:
             logger.info(f"Last obtained date: {account.last_updated} | {account.name}")

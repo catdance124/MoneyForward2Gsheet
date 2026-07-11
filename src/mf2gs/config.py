@@ -1,7 +1,8 @@
 """設定の読み込み。
 
-- 資格情報: .env(gitignore 済み)の MF_SBI_EMAILS / MF_SBI_PASSWORDS(JSON 配列)
-- その他: config.ini(スプレッドシート・asset マッピング・更新待ち時間)
+- 秘匿値: .env(gitignore 済み)に置く。MF_SBI_EMAILS / MF_SBI_PASSWORDS(JSON 配列)
+  と SPREADSHEET_KEY。コミットされる config.ini には秘匿値を書かない
+- その他: config.ini(ワークシート名・asset マッピング・更新待ち時間)
 - パス: 実行時のカレントディレクトリをプロジェクトルートとして解決する
 """
 
@@ -80,7 +81,7 @@ def load_settings(root_dir: Path | None = None) -> Settings:
     return Settings(
         accounts=accounts,
         reload_wait_time=ini.getint('MONEYFORWARD', 'Reload_wait_time'),
-        spreadsheet_key=ini.get('SPREAD_SHEET', 'Key'),
+        spreadsheet_key=os.environ['SPREADSHEET_KEY'],
         worksheet_name=ini.get('SPREAD_SHEET', 'Worksheet_name'),
         assets=assets,
         root_dir=root,
