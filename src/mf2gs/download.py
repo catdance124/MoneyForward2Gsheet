@@ -50,17 +50,14 @@ class Moneyforward(contextlib.AbstractContextManager):
         self.client.ensure_login()
 
     def reload_accounts(self, reload_wait_time: int) -> None:
-        """連携金融機関の情報を更新し、完了を待つ。
+        """連携金融機関の情報を更新し、データ反映(最終取得日時の前進)を待つ。
 
         タイムアウトしても処理は継続する(旧実装は固定時間待って続行していた)。
         """
-        self.client.refresh_all_accounts(dry_run=False)
         try:
-            accounts = self.client.wait_refresh(timeout=reload_wait_time)
-        except RefreshError:
-            # 「更新状態」列は取得完了後もしばらく「更新中」のまま残るため、
-            # タイムアウトは異常ではない。最終取得時刻をログで確認できるので継続する
-            logger.info(f"更新完了を {reload_wait_time} 秒で待ちきれませんでしたが、処理を継続します")
+            accounts = self.client.refresh_and_wait(dry_run=False, timeout=reload_wait_time)
+        except RefreshError as e:
+            logger.warning(f"更新完了を {reload_wait_time} 秒で待ちきれませんでしたが、処理を継続します: {e}")
             accounts = self.client.list_accounts()
         for account in accounts:
             logger.info(f"Last obtained date: {account.last_updated} | {account.name}")

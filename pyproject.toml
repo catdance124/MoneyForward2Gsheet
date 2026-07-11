@@ -16,7 +16,7 @@ dependencies = [
 mf2gs = "mf2gs.cli:main"
 
 [tool.uv.sources]
-mf-sbi-client = { git = "https://github.com/catdance124/mf-sbi-client", tag = "v0.3.1" }
+mf-sbi-client = { git = "https://github.com/catdance124/mf-sbi-client", tag = "v0.3.2" }
 
 [build-system]
 requires = ["uv_build>=0.6,<1"]

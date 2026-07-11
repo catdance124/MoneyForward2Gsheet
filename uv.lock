@@ -328,8 +328,8 @@ wheels = [
 
 [[package]]
 name = "mf-sbi-client"
-version = "0.3.1"
-source = { git = "https://github.com/catdance124/mf-sbi-client?tag=v0.3.1#759617a21426d4af8c76b9b8b6b6fdbd1e0b9b59" }
+version = "0.3.2"
+source = { git = "https://github.com/catdance124/mf-sbi-client?tag=v0.3.2#ba95a4575d7f623ce4dd34fa0705af5208f6936f" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "httpx" },
@@ -351,7 +351,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "gspread", specifier = ">=6" },
-    { name = "mf-sbi-client", git = "https://github.com/catdance124/mf-sbi-client?tag=v0.3.1" },
+    { name = "mf-sbi-client", git = "https://github.com/catdance124/mf-sbi-client?tag=v0.3.2" },
     { name = "numpy", specifier = ">=2" },
     { name = "pandas", specifier = ">=2.2" },
     { name = "python-dotenv", specifier = ">=1.0" },
