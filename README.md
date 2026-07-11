@@ -6,6 +6,17 @@ Scraping is done by [mf-sbi-client](https://github.com/catdance124/mf-sbi-client
 ## env
 - [uv](https://docs.astral.sh/uv/) (manages Python >= 3.12 automatically)
 
+## layout
+```
+MoneyForward2Gsheet/
+├── .env                 # credentials (gitignored, see .env.example)
+├── config.ini           # spreadsheet & asset settings
+├── client_secret.json   # google service account key
+├── csv/                 # generated csv (gitignored)
+├── log/                 # log file (gitignored)
+└── src/mf2gs/           # package: config / download / aggregate / export / cli
+```
+
 ## setting
 ### create account
 https://ssnb.x.moneyforward.com/
@@ -22,7 +33,7 @@ MF_SBI_EMAILS='["<EMAIL 1>", "<EMAIL 2>", "<EMAIL 3>"]'
 MF_SBI_PASSWORDS='["<PASSWORD 1>", "<PASSWORD 2>", "<PASSWORD 3>"]'
 ```
 
-### fill in `src/config.ini`
+### fill in `config.ini`
 ```ini
 [SPREAD_SHEET]
 Key = <SPREADSHEET KEY got from URL>
@@ -32,23 +43,23 @@ Key = <SPREADSHEET KEY got from URL>
 enable API, and allow client to edit your sheet.  
 [reference](https://qiita.com/164kondo/items/eec4d1d8fd7648217935)  
 
-Place the obtained json file as `src/client_secret.json` .
+Place the obtained json file as `client_secret.json` (repository root).
 
 
 ## run
+Run from the repository root:
 ```shell
 $ pwd
 ~/MoneyForward2Gsheet
 $ uv sync
-$ cd src
-$ uv run python mf2gs.py                 # download + export
-$ uv run python download_history.py     # download only
-$ uv run python export_gspread.py       # export only
+$ uv run mf2gs             # download + export
+$ uv run mf2gs download    # download only
+$ uv run mf2gs export      # export only
 ```
 
 For periodic execution, register it in cron. e.g.
 ```cron
-0 6 * * * cd ~/MoneyForward2Gsheet/src && ~/.local/bin/uv run python mf2gs.py
+0 6 * * * cd ~/MoneyForward2Gsheet && ~/.local/bin/uv run mf2gs
 ```
 
 ## Appendix

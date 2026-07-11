@@ -12,8 +12,15 @@ dependencies = [
     "python-dotenv>=1.0",
 ]
 
-[tool.uv]
-package = false
+[project.scripts]
+mf2gs = "mf2gs.cli:main"
 
 [tool.uv.sources]
 mf-sbi-client = { git = "https://github.com/catdance124/mf-sbi-client", tag = "v0.3.0" }
+
+[build-system]
+requires = ["uv_build>=0.6,<1"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "mf2gs"

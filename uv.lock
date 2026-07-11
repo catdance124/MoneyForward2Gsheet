@@ -339,7 +339,7 @@ dependencies = [
 [[package]]
 name = "moneyforward2gsheet"
 version = "2.0.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "gspread" },
     { name = "mf-sbi-client" },
