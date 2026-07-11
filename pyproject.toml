@@ -1,0 +1,26 @@
+[project]
+name = "moneyforward2gsheet"
+version = "2.0.0"
+description = "マネーフォワード for 住信SBIネット銀行 の資産推移・損益を Google Sheets に書き出すバッチ"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mf-sbi-client",
+    "pandas>=2.2",
+    "numpy>=2",
+    "gspread>=6",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+mf2gs = "mf2gs.cli:main"
+
+[tool.uv.sources]
+mf-sbi-client = { git = "https://github.com/catdance124/mf-sbi-client", tag = "v0.3.2" }
+
+[build-system]
+requires = ["uv_build>=0.6,<1"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "mf2gs"
