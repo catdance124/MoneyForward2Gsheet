@@ -1,14 +1,18 @@
+import calendar
 import configparser
-import sys
-import re
-import time
+import contextlib
 import json
-import shutil
+import os
+import re
+import sys
+from datetime import date
 from pathlib import Path
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+from dotenv import load_dotenv
+from mf_sbi_client import Config, RefreshError, open_client
+
 from my_logging import get_my_logger
 logger = get_my_logger(__name__)
 
@@ -17,6 +21,7 @@ logger = get_my_logger(__name__)
 # dir names
 ROOT_CSV_DIR = Path('../csv');              ROOT_CSV_DIR  .mkdir(exist_ok=True)
 CONCAT_CSV_DIR = ROOT_CSV_DIR / 'concat';   CONCAT_CSV_DIR.mkdir(exist_ok=True)
+SESSION_DIR = Path('../.session')
 # csv names
 ALL_HISTORY_CSV = 'all_history.csv'
 ALL_HISTORY_WPL_CSV = 'all_history_with_profit_and_loss.csv'
@@ -25,23 +30,19 @@ ALL_HISTORY_WPL_CSV = 'all_history_with_profit_and_loss.csv'
 class Moneyforward():
     """
     Moneyforwardから各種情報を取得する
-    
+
     Attributes
     ----------
     email : str
         ログイン用メールアドレス
-    password : str
-        ログイン用パスワード
     csv_dir : Path
         ユーザごとのcsvを保持するルートディレクトリ
     portfolio_dir : Path
         ユーザごとのportfolioに関するcsvを保持するディレクトリ
     history_dir : Path
         ユーザごとのhistoryに関するcsvを保持するディレクトリ
-    download_dir : Path
-        csvをダウンロードする際に一時保存するディレクトリ
-    driver : WebDriver
-        seleniumが利用するwebdriver
+    client : MfSbiClient
+        mf-sbi-client のHTTPクライアント
     """
     def __init__(self, email: str, password: str) -> None:
         """
@@ -52,99 +53,79 @@ class Moneyforward():
         password : str
             ログイン用パスワード
         """
-        self.BASE_URL = 'https://ssnb.x.moneyforward.com'
         self.email = email
-        self.password = password
         self.csv_dir = ROOT_CSV_DIR / email;                self.csv_dir      .mkdir(exist_ok=True)
         self.portfolio_dir = self.csv_dir / 'portfolio';    self.portfolio_dir.mkdir(exist_ok=True)
         self.history_dir = self.csv_dir / 'history';        self.history_dir  .mkdir(exist_ok=True)
-        self.download_dir = Path('../download');            self.download_dir .mkdir(exist_ok=True)
-        options = webdriver.ChromeOptions()
-        options.add_experimental_option('prefs', {
-            'download.default_directory': str(self.download_dir.resolve()), 
-            'intl.accept_languages': 'ja'
-        })
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--lang=ja-JP')
-        options.binary_location = "/usr/bin/chromium"
-        self.driver = webdriver.Chrome(options=options)
-    
+        (SESSION_DIR / email).mkdir(parents=True, exist_ok=True)
+        self._stack = contextlib.ExitStack()
+        self.client = self._stack.enter_context(open_client(
+            Config(email=email, password=password),
+            cookies_path=SESSION_DIR / email / 'cookies.json',
+        ))
+
     def close(self) -> None:
         """
-        webdriverの終了処理を行う。
+        HTTPクライアントの終了処理を行う。
         """
-        self.driver.quit()
-        shutil.rmtree(self.download_dir)
+        self._stack.close()
 
     def login(self) -> None:
         """
         MoneyForwardのログイン処理を実施する
         """
-        login_url = self.BASE_URL + '/users/sign_in'
-        self.driver.get(login_url)
-        email_input = self.driver.find_element(By.NAME, 'sign_in_session_service[email]')
-        email_input.clear()
-        email_input.send_keys(self.email)
-        email_input.submit()
-        time.sleep(3)
-        password_input = self.driver.find_element(By.NAME, 'sign_in_session_service[password]')
-        password_input.clear()
-        password_input.send_keys(self.password)
-        password_input.submit()
+        self.client.ensure_login()
 
-    def refresh_valuation_profit_and_loss(self, asset_id: str) -> None:
+    def refresh_valuation_profit_and_loss(self, asset_ids: list) -> None:
         """
         ローカルの各assetの資産内訳（損益）を最新状態にする
 
         Parameters
         ----------
-        asset_id : str
-            html要素の特定に利用するasset_id
+        asset_ids : list of str
+            html要素の特定に利用するasset_idのリスト
         """
-        save_path = self.portfolio_dir / f'{asset_id}.csv'
-        portfolio_url = self.BASE_URL + '/bs/portfolio'
-        self.driver.get(portfolio_url)
-        tables = self.driver.find_elements(By.XPATH, f'//*[@id="{asset_id}"]//table')
-        if len(tables) == 0:
-            logger.debug(f"no portfolio elements: {asset_id}")
-            save_path.unlink(missing_ok=True)
-            return
-        table = tables[0]
-        ths = [th.text for th in table.find_elements(By.XPATH, 'thead//th')]
-        trs = table.find_elements(By.XPATH, 'tbody/tr')
-        tds = [[td.text for td in tr.find_elements(By.XPATH, 'td')] for tr in trs]
-        df = pd.DataFrame(tds, columns=ths)
-        df = df.replace(',', '', regex=True).replace('円', '', regex=True)
-        df.to_csv(save_path, encoding='utf-8', index=False)
-        logger.info(f"Downloaded {save_path}")
+        details = self.client.get_portfolio_details()
+        for asset_id in asset_ids:
+            save_path = self.portfolio_dir / f'{asset_id}.csv'
+            rows = details.get(asset_id, [])
+            if not rows:
+                logger.debug(f"no portfolio elements: {asset_id}")
+                save_path.unlink(missing_ok=True)
+                continue
+            df = pd.DataFrame(rows)
+            df = df.replace(',', '', regex=True).replace('円', '', regex=True)
+            df.to_csv(save_path, encoding='utf-8', index=False)
+            logger.info(f"Downloaded {save_path}")
 
     def download_history(self) -> None:
         """
         各月の資産推移を取得する
         """
-        history_url = self.BASE_URL + '/bs/history'
-        self.driver.get(history_url)
-        anchors = self.driver.find_elements(By.XPATH, '//*[@id="bs-history"]/*/table/tbody/tr/td/a')
         # download previous month csv
-        for anchor in anchors:
-            href = anchor.get_attribute('href')
-            if not 'monthly' in href:
+        for point in self.client.get_asset_history():
+            if not point.is_monthly:
                 continue
-            month = re.search(r'\d{4}-\d{2}-\d{2}', href).group()
-            save_path = self.history_dir / f'{month}.csv'
+            # 月次行の日付テキストは「YYYY-MM月末」形式
+            matched = re.match(r'(\d{4})-(\d{2})', point.date)
+            if matched is None:
+                logger.warning(f"unexpected monthly date format: {point.date}")
+                continue
+            year, month = int(matched.group(1)), int(matched.group(2))
+            month_end = date(year, month, calendar.monthrange(year, month)[1])
+            save_path = self.history_dir / f'{month_end:%Y-%m-%d}.csv'
             if save_path.exists():
                 continue
-            month_csv = self.BASE_URL + f'/bs/history/list/{month}/monthly/csv'
-            self._download_csv(month_csv, save_path)
+            save_path.write_text(self.client.get_monthly_asset_history_csv(month_end), encoding='utf-8')
+            logger.info(f"Downloaded {save_path}")
         # download this month csv
         save_path = self.history_dir / 'this_month.csv'
         save_path.unlink(missing_ok=True)
-        this_month_csv = self.BASE_URL + '/bs/history/csv'
-        self._download_csv(this_month_csv, save_path)
+        save_path.write_text(self.client.get_asset_history_csv(), encoding='utf-8')
+        logger.info(f"Downloaded {save_path}")
         # create concatenated csv
         self._concat_csv()
-    
+
     def reload_accounts(self, reload_wait_time: int = 60) -> None:
         """
         登録されている金融機関の情報を更新する
@@ -152,55 +133,18 @@ class Moneyforward():
         Parameters
         ----------
         reload_wait_time: int
-            更新ボタン押下後に待機する秒数
+            更新完了を待機する最大秒数
         """
-        accounts_url = self.BASE_URL + '/accounts'
-        self.driver.get(accounts_url)
-        reload_btns = self.driver.find_elements(By.XPATH, '//input[@data-disable-with="更新"]')
-        for reload_btn in reload_btns:
-            reload_btn.click()
-        time.sleep(reload_wait_time)
-        trs = self.driver.find_elements(By.XPATH, '//tr[@id]')
-        for tr in trs:
-            acount_name = tr.find_element(By.XPATH, 'td[1]/a[starts-with(@href, "/accounts")]').text
-            last_obtained_time = tr.find_element(By.XPATH, 'td[3]').text.replace('\n', '')
-            logger.info(f"Last obtained date: {last_obtained_time} | {acount_name}")
+        self.client.refresh_all_accounts(dry_run=False)
+        try:
+            accounts = self.client.wait_refresh(timeout=reload_wait_time)
+        except RefreshError as e:
+            # 旧実装は固定時間待って続行していたため、タイムアウトしても処理は継続する
+            logger.warning(f"reload timeout: {e}")
+            accounts = self.client.list_accounts()
+        for account in accounts:
+            logger.info(f"Last obtained date: {account.last_updated} | {account.name}")
 
-    def _download_csv(self, url: str, save_path: Path) -> None:
-        """
-        指定URLのファイルをダウンロードする
-
-        Parameters
-        ----------
-        url: str
-            保存したいファイルのURL
-        save_path : Path
-            保存先のパス
-        """
-        self.driver.get(url)
-        self._rename_latest_csv(save_path)
-        logger.info(f"Downloaded {save_path}")
-
-    def _rename_latest_csv(self, new_path: Path) -> None:
-        """
-        ダウンロードディレクトリの最新ファイルをリネームし再配置する
-        同時に文字コード変換も実施する
-
-        Parameters
-        ----------
-        new_path : Path
-            新しく保存したいパス
-        """
-        def _convert_shiftJIS_to_utf8(cp932_csv, utf8_csv):
-            with open(cp932_csv, encoding='cp932',errors='replace') as fin:
-                with open(utf8_csv, 'w', encoding='utf-8',errors='replace') as fout:
-                    fout.write(fin.read())
-        time.sleep(2)
-        download_files = self.download_dir.glob('*')
-        latest_csv = max(download_files, key=lambda p: p.stat().st_ctime)
-        _convert_shiftJIS_to_utf8(latest_csv, new_path)
-        latest_csv.unlink(missing_ok=True)
-    
     def _concat_csv(self) -> None:
         """
         ダウンロードした各月の資産推移を結合する
@@ -298,13 +242,14 @@ def concat_each_account_files(assets: list) -> pd.DataFrame:
 
 
 def main() -> None:
+    load_dotenv('../.env')
+    emails = json.loads(os.environ['MF_SBI_EMAILS'])
+    passwords = json.loads(os.environ['MF_SBI_PASSWORDS'])
     config_ini = configparser.ConfigParser()
     config_ini.read('config.ini', encoding='utf-8')
-    emails = json.loads(config_ini.get('MONEYFORWARD','Email'))
-    passwords = json.loads(config_ini.get('MONEYFORWARD','Password'))
     assets = [dict(config_ini.items(section)) for section in config_ini.sections() if 'asset_' in section]
     reload_wait_time = int(config_ini.get('MONEYFORWARD','Reload_wait_time'))
-    
+
     # download each files
     for email, password in zip(emails, passwords):
         mf = Moneyforward(email=email, password=password)
@@ -312,31 +257,33 @@ def main() -> None:
             mf.login()
             mf.reload_accounts(reload_wait_time)
             mf.download_history()
-            for asset_id in [asset['id'] for asset in assets]:
-                mf.refresh_valuation_profit_and_loss(asset_id)
+            mf.refresh_valuation_profit_and_loss([asset['id'] for asset in assets])
             mf.calc_profit_and_loss(assets)
         except Exception as e:
             logger.error(e)
             sys.exit(1)
         finally:
             mf.close()
-    
+
     # concat each files
     new_all_history_wpl = concat_each_account_files(assets)
-    new_all_history_wpl.reset_index(inplace=True)
 
     # generate result csv
     all_history_wpl_csv_path = ROOT_CSV_DIR / ALL_HISTORY_WPL_CSV
-    old_all_history_wpl = pd.read_csv(all_history_wpl_csv_path, encoding='utf-8', sep=',') if all_history_wpl_csv_path.exists() else new_all_history_wpl
-    df_merged_newer = my_set_index(pd.merge(new_all_history_wpl, old_all_history_wpl, how='outer')).sort_index(axis='columns')
-    df_merged_older = my_set_index(pd.merge(old_all_history_wpl, new_all_history_wpl, how='outer')).sort_index(axis='columns')
+    old_all_history_wpl = my_set_index(pd.read_csv(all_history_wpl_csv_path, encoding='utf-8', sep=',')) if all_history_wpl_csv_path.exists() else new_all_history_wpl
+    # 日付indexで整合を取り、既存日付はnewer優先・newerに無い日付/列はolderで補完する
+    df_merged = new_all_history_wpl.combine_first(old_all_history_wpl)
+    df_merged.fillna(0, inplace=True)
+    df_merged.sort_index(ascending=False, inplace=True)
+    df_merged = df_merged.sort_index(axis='columns')
     # newerの損益値が0の場合はolderの値を採用
     for asset in assets:
         column_name = asset['column_name']
-        if column_name == '':
+        if column_name == '' or column_name not in old_all_history_wpl.columns:
             continue
-        df_merged_newer[column_name] = np.where(df_merged_newer[column_name] == 0, df_merged_older[column_name], df_merged_newer[column_name])
-    df_merged_newer.to_csv(all_history_wpl_csv_path, encoding='utf-8')
+        older_values = old_all_history_wpl[column_name].reindex(df_merged.index).fillna(0)
+        df_merged[column_name] = np.where(df_merged[column_name] == 0, older_values, df_merged[column_name])
+    df_merged.to_csv(all_history_wpl_csv_path, encoding='utf-8')
 
 
 if __name__ == '__main__':

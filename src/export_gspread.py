@@ -2,7 +2,6 @@ import configparser
 import csv
 from pathlib import Path
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 from my_logging import get_my_logger
 logger = get_my_logger(__name__)
 
@@ -31,9 +30,7 @@ def connect_gspread(json_path: str, spreadsheet_key: str) -> gspread.Spreadsheet
     workbook : gspread.Spreadsheet
         スプレッドシートオブジェクト
     """
-    scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
-    credentials = ServiceAccountCredentials.from_json_keyfile_name(json_path, scope)
-    gc = gspread.authorize(credentials)
+    gc = gspread.service_account(filename=json_path)
     workbook = gc.open_by_key(spreadsheet_key)
     return workbook
 

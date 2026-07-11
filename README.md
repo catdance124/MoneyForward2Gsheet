@@ -1,38 +1,29 @@
 # MoneyForward2Gsheet
 Downloading asset trends📈 from `マネーフォワード for 住信SBIネット銀行`, and exporting them to google spreadsheet, in python.
 
+Scraping is done by [mf-sbi-client](https://github.com/catdance124/mf-sbi-client) (httpx + BeautifulSoup) — no browser, no docker required.
+
 ## env
-- docker
+- [uv](https://docs.astral.sh/uv/) (manages Python >= 3.12 automatically)
 
 ## setting
 ### create account
 https://ssnb.x.moneyforward.com/
 
-### fill in `src/config.ini`
-```ini
+### fill in `.env`
+Copy `.env.example` to `.env` and fill in your credentials (JSON arrays, multi-account supported):
+```sh
 # case of single account
-[MONEYFORWARD]
-Email = [
-    "<REGISTERED EMAIL>"
-]
-Password = [
-    "<REGISTERED PASSWORD>"
-]
+MF_SBI_EMAILS='["<REGISTERED EMAIL>"]'
+MF_SBI_PASSWORDS='["<REGISTERED PASSWORD>"]'
 
 # case of multi account
-[MONEYFORWARD]
-Email = [
-    "<REGISTERED EMAIL 1>",
-    "<REGISTERED EMAIL 2>",
-    "<REGISTERED EMAIL 3>"
-]
-Password = [
-    "<REGISTERED PASSWORD 1>",
-    "<REGISTERED PASSWORD 2>",
-    "<REGISTERED PASSWORD 3>"
-]
+MF_SBI_EMAILS='["<EMAIL 1>", "<EMAIL 2>", "<EMAIL 3>"]'
+MF_SBI_PASSWORDS='["<PASSWORD 1>", "<PASSWORD 2>", "<PASSWORD 3>"]'
+```
 
-
+### fill in `src/config.ini`
+```ini
 [SPREAD_SHEET]
 Key = <SPREADSHEET KEY got from URL>
 ```
@@ -48,9 +39,16 @@ Place the obtained json file as `src/client_secret.json` .
 ```shell
 $ pwd
 ~/MoneyForward2Gsheet
-$ bash make_env.sh
-$ docker-compose build
-$ docker-compose up -d
+$ uv sync
+$ cd src
+$ uv run python mf2gs.py                 # download + export
+$ uv run python download_history.py     # download only
+$ uv run python export_gspread.py       # export only
+```
+
+For periodic execution, register it in cron. e.g.
+```cron
+0 6 * * * cd ~/MoneyForward2Gsheet/src && ~/.local/bin/uv run python mf2gs.py
 ```
 
 ## Appendix
